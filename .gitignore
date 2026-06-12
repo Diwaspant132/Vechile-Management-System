@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Production
+build/
+dist/
+
+# Env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Databases
+*.db
+*.db-shm
+*.db-wal
+
+# Uploads
+ntc-fleet-backend/uploads/
+
+# OS Files
+.DS_Store
+Thumbs.db
