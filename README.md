@@ -11,21 +11,10 @@ An enterprise-grade, multi-tenant fleet management and telemetry platform design
 ---
 
 ## 📸 Screenshots
-
-### 1. Global Monitoring Dashboard
-![Global Dashboard](assets/5_global_dashboard.png)
-
-### 2. Live GPS Tracking & Telemetry
-![Live Tracking](assets/1_live_tracking.png)
-
-### 3. Role-Based Fleet Analytics
-![Reports and Analytics](assets/2_reports_analytics.png)
-
-### 4. Branch-Isolated Request Management
-![Request Management](assets/3_request_management.png)
-
-### 5. Driver Trip Management Console
-![Trip Management](assets/4_trip_management.png)
+*(Add your screenshots here by dragging and dropping them into the GitHub editor!)*
+* **Live GPS Tracking & Telemetry**
+* **Role-Based Fleet Analytics**
+* **Branch-Isolated Request Management**
 
 ---
 
