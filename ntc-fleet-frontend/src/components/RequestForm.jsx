@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { NTC_BRANCHES } from '../data/branches';
 
 const RequestForm = () => {
   const navigate = useNavigate();
   const { user } = useAuth(); 
-
 
   const [pickupLocation, setPickupLocation] = useState('');
   const [destination, setDestination] = useState('');
@@ -13,11 +13,15 @@ const RequestForm = () => {
   const [purpose, setPurpose] = useState('');
   const [errorBanner, setErrorBanner] = useState('');
 
+  const [showPickupDropdown, setShowPickupDropdown] = useState(false);
+  const [showDestDropdown, setShowDestDropdown] = useState(false);
+
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
     if (user?.branch) {
-      setPickupLocation(user.branch.replace('_', ' '));
+      const branchObj = NTC_BRANCHES.find(b => b.id === user.branch);
+      setPickupLocation(branchObj ? branchObj.name : user.branch);
     }
   }, [user]);
 
@@ -51,12 +55,10 @@ const RequestForm = () => {
         body: JSON.stringify(payload)
       });
 
-      // 🟢 Improved Response Handling
       const data = await response.json().catch(() => ({})); 
 
       if (response.ok) {
         alert('Vehicle request logged into NTC database successfully!');
-        // Ensure this route exists in your App.jsx routes
         navigate('/dashboard/my-requests'); 
       } else {
         setErrorBanner(data.error || 'Server rejected the request.');
@@ -76,16 +78,60 @@ const RequestForm = () => {
       )}
 
       <form onSubmit={handleSubmit} className="d-flex flex-column gap-3">
-
-
-        <div>
+        <div className="position-relative">
           <label className="form-label fw-semibold text-dark small mb-1">Pickup Location *</label>
-          <input type="text" className="form-control text-uppercase" value={pickupLocation} onChange={(e) => setPickupLocation(e.target.value)} required />
+          <input 
+            type="text" 
+            className="form-control" 
+            placeholder="Select branch or type location..." 
+            value={pickupLocation} 
+            onChange={(e) => setPickupLocation(e.target.value)} 
+            onFocus={() => setShowPickupDropdown(true)}
+            onBlur={() => setTimeout(() => setShowPickupDropdown(false), 200)}
+            required 
+          />
+          {showPickupDropdown && (
+            <ul className="dropdown-menu show w-100 position-absolute shadow-sm" style={{ top: '100%', zIndex: 1000, maxHeight: '200px', overflowY: 'auto' }}>
+              {NTC_BRANCHES.filter(b => b.name.toLowerCase().includes(pickupLocation.toLowerCase())).map(b => (
+                <li key={b.id}>
+                  <button type="button" className="dropdown-item py-2" onMouseDown={() => setPickupLocation(b.name)}>
+                    {b.name}
+                  </button>
+                </li>
+              ))}
+              {NTC_BRANCHES.filter(b => b.name.toLowerCase().includes(pickupLocation.toLowerCase())).length === 0 && (
+                <li><span className="dropdown-item text-muted">Press enter to use custom location</span></li>
+              )}
+            </ul>
+          )}
         </div>
 
-        <div>
+        <div className="position-relative">
           <label className="form-label fw-semibold text-secondary small">Destination *</label>
-          <input type="text" className="form-control" value={destination} onChange={(e) => setDestination(e.target.value)} required />
+          <input 
+            type="text" 
+            className="form-control" 
+            placeholder="Select branch or type destination..." 
+            value={destination} 
+            onChange={(e) => setDestination(e.target.value)} 
+            onFocus={() => setShowDestDropdown(true)}
+            onBlur={() => setTimeout(() => setShowDestDropdown(false), 200)}
+            required 
+          />
+          {showDestDropdown && (
+            <ul className="dropdown-menu show w-100 position-absolute shadow-sm" style={{ top: '100%', zIndex: 1000, maxHeight: '200px', overflowY: 'auto' }}>
+              {NTC_BRANCHES.filter(b => b.name.toLowerCase().includes(destination.toLowerCase())).map(b => (
+                <li key={b.id}>
+                  <button type="button" className="dropdown-item py-2" onMouseDown={() => setDestination(b.name)}>
+                    {b.name}
+                  </button>
+                </li>
+              ))}
+              {NTC_BRANCHES.filter(b => b.name.toLowerCase().includes(destination.toLowerCase())).length === 0 && (
+                <li><span className="dropdown-item text-muted">Press enter to use custom destination</span></li>
+              )}
+            </ul>
+          )}
         </div>
 
         <div>

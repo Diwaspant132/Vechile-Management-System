@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Car, ClipboardCopy, CheckCircle2, AlertCircle, Building2 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 const BranchDashboard = () => {
+  const { user } = useAuth();
   const [metrics, setMetrics] = useState({ totalVehicles: 0, pendingReqs: 0, approvedReqs: 0 });
   const [loading, setLoading] = useState(true);
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -9,12 +11,13 @@ const BranchDashboard = () => {
   useEffect(() => {
     const fetchDashboardMetrics = async () => {
       try {
+        const branchParam = `?branch=${encodeURIComponent(user?.branch || '')}`;
         // 1. Fetch live requests data stream from your local backend server
-        const reqsResponse = await fetch(`${API_URL}/api/requests`);
+        const reqsResponse = await fetch(`${API_URL}/api/requests${branchParam}`);
         const reqsData = await reqsResponse.json();
 
         // 2. Fetch live fleet vehicle data stream
-        const vehiclesResponse = await fetch(`${API_URL}/api/vehicles`);
+        const vehiclesResponse = await fetch(`${API_URL}/api/vehicles${branchParam}`);
         const vehiclesData = await vehiclesResponse.json();
 
         // 3. Compute metric groupings dynamically based on the active statuses
@@ -51,7 +54,7 @@ const BranchDashboard = () => {
           <p className="text-muted mb-0">Live operations summary for active transport divisions.</p>
         </div>
         <div className="badge bg-primary px-3 py-2 fs-6 d-flex align-items-center gap-2 shadow-sm">
-          <Building2 size={16} /> Jawalakhel Central Hub
+          <Building2 size={16} /> {user?.branch || 'Central'} Hub
         </div>
       </div>
 

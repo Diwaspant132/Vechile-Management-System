@@ -34,6 +34,7 @@ const Sidebar = ({ isOpen, closeMobile }) => {
     // Vehicles mapping
     // SUPER_ADMIN gets 'All Vehicles', others get 'Branch Vehicles' only if assigned
     { path: '/dashboard/vehicles', name: 'All Vehicles', icon: <Car />, roles: ['SUPER_ADMIN'] },
+    { path: '/dashboard/transfer-requests', name: 'Transfer Requests', icon: <CarFront />, roles: ['SUPER_ADMIN'] },
     { path: '/dashboard/branch-vehicles', name: 'Branch Vehicles', icon: <Car />, roles: ['BRANCH_ADMIN', 'TRANSPORT_OFFICER'] },
     
     { path: '/dashboard/tracking', name: 'Live Tracking', icon: <MapPin />, roles: ['SUPER_ADMIN', 'BRANCH_ADMIN', 'TRANSPORT_OFFICER'] },

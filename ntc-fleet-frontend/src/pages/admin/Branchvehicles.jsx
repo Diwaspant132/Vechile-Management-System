@@ -5,12 +5,13 @@ import { toast } from 'react-hot-toast';
 
 const BranchVehicles = () => {
   const [vehicles, setVehicles] = useState([]);
-  const [newVehicle, setNewVehicle] = useState({ license_plate: '', model: '', mileage_kmpl: '' });
+  const [newVehicle, setNewVehicle] = useState({ license_plate: '', model: '', mileage_kmpl: '', initial_distance: '' });
+  const [bluebookDocument, setBluebookDocument] = useState(null);
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   const { user } = useAuth();
-  const branch = user?.branch || 'JAWALAKHEL';
+  const branch = user?.branch || '';
 
   useEffect(() => {
     if (user) {
@@ -22,7 +23,8 @@ const BranchVehicles = () => {
 
   const fetchVehicles = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/vehicles`);
+      const branchParam = user?.role === 'BRANCH_ADMIN' ? `?branch=${encodeURIComponent(user?.branch || '')}` : '';
+      const res = await fetch(`${API_URL}/api/vehicles${branchParam}`);
       const data = await res.json();
       
       let filteredVehicles = Array.isArray(data) ? data : [];
@@ -44,22 +46,79 @@ const BranchVehicles = () => {
       if (newVehicle.mileage_kmpl) {
          payload.mileage_kmpl = parseFloat(newVehicle.mileage_kmpl);
       }
+      if (newVehicle.initial_distance) {
+         payload.initial_distance = parseFloat(newVehicle.initial_distance);
+      }
       
       const res = await fetch(`${API_URL}/api/vehicles`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+      const data = await res.json();
+
       if (res.ok) {
-        setNewVehicle({ license_plate: '', model: '', mileage_kmpl: '' });
+        if (bluebookDocument && data.vehicleId) {
+           const formData = new FormData();
+           formData.append('bluebook_document', bluebookDocument);
+           
+           await fetch(`${API_URL}/api/vehicles/${data.vehicleId}/bluebook`, {
+              method: 'POST',
+              body: formData
+           });
+        }
+
+        setNewVehicle({ license_plate: '', model: '', mileage_kmpl: '', initial_distance: '' });
+        setBluebookDocument(null);
+        const fileInput = document.getElementById('bluebookInput');
+        if (fileInput) fileInput.value = '';
+
         fetchVehicles();
         toast.success("Vehicle registered successfully!");
       } else {
-        toast.error("Failed to add vehicle.");
+        toast.error(data.error || "Failed to add vehicle.");
       }
     } catch (err) {
       console.error("Error adding vehicle:", err);
       toast.error("An error occurred while adding the vehicle.");
+    }
+  };
+
+  const handleRemoveVehicle = async (vehicleId, licensePlate) => {
+    if (window.confirm(`Are you sure you want to permanently delete vehicle ${licensePlate} from the system?`)) {
+      try {
+        const res = await fetch(`${API_URL}/api/vehicles/${vehicleId}`, { method: 'DELETE' });
+        if (res.ok) {
+          toast.success("Vehicle removed successfully.");
+          fetchVehicles();
+        } else {
+          toast.error("Failed to remove vehicle.");
+        }
+      } catch (e) {
+        console.error(e);
+        toast.error("An error occurred.");
+      }
+    }
+  };
+
+  const handleTransferRequest = async (vehicleId, licensePlate) => {
+    if (window.confirm(`Send transfer request for vehicle ${licensePlate} to Super Admin?`)) {
+      try {
+        const payload = { from_branch: branch, requested_by_admin_id: user.id };
+        const res = await fetch(`${API_URL}/api/vehicles/${vehicleId}/transfer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          toast.success("Transfer request sent to Super Admin.");
+        } else {
+          toast.error("Failed to send transfer request.");
+        }
+      } catch (e) {
+        console.error(e);
+        toast.error("An error occurred.");
+      }
     }
   };
 
@@ -77,38 +136,62 @@ const BranchVehicles = () => {
           <h5 className="mb-3">Register New Vehicle</h5>
           <form onSubmit={handleAddVehicle} className="row g-3">
             <div className="col-md-3">
+              <label className="form-label mb-1 small text-muted">License Plate <span className="text-danger">*</span></label>
               <input 
                 type="text" 
                 className="form-control" 
-                placeholder="License Plate (e.g. Ba 1 Ja 1234)" 
+                placeholder="e.g. Ba 1 Ja 1234" 
                 value={newVehicle.license_plate}
                 onChange={e => setNewVehicle({...newVehicle, license_plate: e.target.value})}
                 required
               />
             </div>
-            <div className="col-md-4">
+            <div className="col-md-3">
+              <label className="form-label mb-1 small text-muted">Vehicle Model <span className="text-danger">*</span></label>
               <input 
                 type="text" 
                 className="form-control" 
-                placeholder="Vehicle Model (e.g. SUV Toyota Hilux)" 
+                placeholder="e.g. SUV Toyota Hilux" 
                 value={newVehicle.model}
                 onChange={e => setNewVehicle({...newVehicle, model: e.target.value})}
                 required
               />
             </div>
             <div className="col-md-3">
+              <label className="form-label mb-1 small text-muted">Mileage (km/L) <span className="text-danger">*</span></label>
               <input 
                 type="number" 
                 step="0.1"
                 className="form-control" 
-                placeholder="Mileage (km/L)" 
+                placeholder="e.g. 15.0" 
                 value={newVehicle.mileage_kmpl}
                 onChange={e => setNewVehicle({...newVehicle, mileage_kmpl: e.target.value})}
                 required
               />
             </div>
-            <div className="col-md-2">
-              <button type="submit" className="btn btn-primary w-100">Add Vehicle</button>
+            <div className="col-md-3">
+              <label className="form-label mb-1 small text-muted">Initial Dist (km)</label>
+              <input 
+                type="number" 
+                step="0.1"
+                className="form-control" 
+                placeholder="0.0" 
+                value={newVehicle.initial_distance}
+                onChange={e => setNewVehicle({...newVehicle, initial_distance: e.target.value})}
+              />
+            </div>
+            <div className="col-md-8 mt-3">
+              <label className="form-label mb-1 small text-muted">Upload Bluebook (Optional)</label>
+              <input 
+                type="file" 
+                id="bluebookInput"
+                className="form-control" 
+                accept="image/*,.pdf"
+                onChange={e => setBluebookDocument(e.target.files[0])}
+              />
+            </div>
+            <div className="col-md-4 mt-3 d-flex align-items-end">
+              <button type="submit" className="btn btn-primary w-100" style={{ height: "38px" }}>Add Vehicle</button>
             </div>
           </form>
         </div>
@@ -139,12 +222,30 @@ const BranchVehicles = () => {
                   </span>
                 </td>
                 <td>
-                  <button 
-                    className="btn btn-sm btn-outline-primary"
-                    onClick={() => navigate('/dashboard/reports', { state: { selectedVehicleId: v.id, licensePlate: v.license_plate } })}
-                  >
-                    View Report
-                  </button>
+                  <div className="d-flex gap-2 flex-wrap">
+                    <button 
+                      className="btn btn-sm btn-outline-primary"
+                      onClick={() => navigate('/dashboard/reports', { state: { selectedVehicleId: v.id, licensePlate: v.license_plate } })}
+                    >
+                      View Report
+                    </button>
+                    {user?.role === 'BRANCH_ADMIN' && (
+                      <>
+                        <button 
+                          className="btn btn-sm btn-outline-warning"
+                          onClick={() => handleTransferRequest(v.id, v.license_plate)}
+                        >
+                          Transfer
+                        </button>
+                        <button 
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => handleRemoveVehicle(v.id, v.license_plate)}
+                        >
+                          Remove
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

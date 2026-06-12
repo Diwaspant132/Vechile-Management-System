@@ -12,7 +12,7 @@ const ReportsAnalytics = () => {
   const [loading, setLoading] = useState(true);
   const [vehicleData, setVehicleData] = useState(null);
   const [showFuelModal, setShowFuelModal] = useState(false);
-  const [fuelForm, setFuelForm] = useState({ liters_added: '', cost: '' });
+  const [fuelForm, setFuelForm] = useState({ liters_added: '', token_date: new Date().toISOString().split('T')[0] });
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [issueForm, setIssueForm] = useState({ service_type: 'Other/Mechanical Issue', description: '' });
   
@@ -35,7 +35,7 @@ const ReportsAnalytics = () => {
         try {
           const res = await fetch(`${API_URL}/api/drivers`);
           const data = await res.json();
-          const myProfile = Array.isArray(data) ? data.find(d => String(d.phone_number) === String(user.phone_number)) : null;
+          const myProfile = Array.isArray(data) ? data.find(d => String(d.phone_number) === String(user.phone_number) && String(d.first_name).toLowerCase() === String(user.first_name).toLowerCase()) : null;
           if (myProfile) {
             const vehRes = await fetch(`${API_URL}/api/driver/my-vehicle/${myProfile.id}`);
             if (vehRes.ok) {
@@ -63,13 +63,12 @@ const ReportsAnalytics = () => {
             }
         }
         
-        const response = await fetch(`${API_URL}/api/requests`);
+        const branchParam = user?.role === 'BRANCH_ADMIN' ? `?branch=${encodeURIComponent(user?.branch || '')}` : '';
+        const response = await fetch(`${API_URL}/api/requests${branchParam}`);
         const data = await response.json();
         
         let processedData = Array.isArray(data) ? data : [];
-        if (user?.role === 'BRANCH_ADMIN') {
-            processedData = processedData.filter(r => r.branch === user.branch);
-        }
+        // Backend handles branch isolation via branchParam
         
         setRequests(processedData);
         setLoading(false);
@@ -110,7 +109,7 @@ const ReportsAnalytics = () => {
       if (user.role === 'DRIVER') {
           const res = await fetch(`${API_URL}/api/drivers`);
           const data = await res.json();
-          const me = Array.isArray(data) ? data.find(d => String(d.phone_number) === String(user.phone_number)) : null;
+          const me = Array.isArray(data) ? data.find(d => String(d.phone_number) === String(user.phone_number) && String(d.first_name).toLowerCase() === String(user.first_name).toLowerCase()) : null;
           if (me) dId = me.id;
       }
       
@@ -120,18 +119,18 @@ const ReportsAnalytics = () => {
         body: JSON.stringify({
           driver_id: dId,
           liters_added: fuelForm.liters_added,
-          cost: fuelForm.cost
+          token_date: fuelForm.token_date
         })
       });
       if (res.ok) {
         setShowFuelModal(false);
-        setFuelForm({ liters_added: '', cost: '' });
+        setFuelForm({ liters_added: '', token_date: new Date().toISOString().split('T')[0] });
         const vRes = await fetch(`${API_URL}/api/vehicles/${activeVehicleId}/reports`);
         if (vRes.ok) {
             const vData = await vRes.json();
             setVehicleData(vData);
         }
-        toast.success("Fuel purchase logged successfully!");
+        toast.success("Fuel token logged successfully!");
       } else {
         toast.error("Failed to log fuel purchase.");
       }
@@ -148,7 +147,7 @@ const ReportsAnalytics = () => {
       if (user.role === 'DRIVER') {
           const res = await fetch(`${API_URL}/api/drivers`);
           const data = await res.json();
-          const me = Array.isArray(data) ? data.find(d => String(d.phone_number) === String(user.phone_number)) : null;
+          const me = Array.isArray(data) ? data.find(d => String(d.phone_number) === String(user.phone_number) && String(d.first_name).toLowerCase() === String(user.first_name).toLowerCase()) : null;
           if (me) dId = me.id;
       }
       const res = await fetch(`${API_URL}/api/maintenance`, {
@@ -181,10 +180,11 @@ const ReportsAnalytics = () => {
     csvContent += `License Plate,${vehicleData.vehicle?.license_plate || ''}\n`;
     csvContent += `Total Distance,${vehicleData.vehicle?.total_distance || 0} km\n\n`;
     
-    csvContent += "FUEL LOGS\n";
-    csvContent += "Date,Driver,Liters,Cost\n";
+    csvContent += "FUEL TOKEN LOGS\n";
+    csvContent += "Date,Driver,Liters\n";
     vehicleData.fuel_logs?.forEach(f => {
-      csvContent += `${f.created_at ? new Date(f.created_at).toLocaleDateString() : ''},${f.first_name || 'Admin'} ${f.last_name || ''},${f.liters_added || 0},${f.cost || 0}\n`;
+      const dateVal = f.token_date ? new Date(f.token_date).toLocaleDateString() : (f.created_at ? new Date(f.created_at).toLocaleDateString() : '');
+      csvContent += `${dateVal},${f.first_name || 'Admin'} ${f.last_name || ''},${f.liters_added || 0}\n`;
     });
     csvContent += "\n";
     
@@ -210,9 +210,8 @@ const ReportsAnalytics = () => {
       const { vehicle, trips, fuel_logs, maintenance_logs } = vehicleData;
       const totalCalculatedFuel = trips?.reduce((acc, t) => acc + (t.petrol_consumed || 0), 0) || 0;
       const totalPurchasedFuel = fuel_logs?.reduce((acc, f) => acc + (f.liters_added || 0), 0) || 0;
-      const totalFuelCost = fuel_logs?.reduce((acc, f) => acc + (f.cost || 0), 0) || 0;
       const totalMaintenanceCost = maintenance_logs?.filter(m => m.status === 'COMPLETED').reduce((acc, m) => acc + (m.cost || 0), 0) || 0;
-      const tco = totalFuelCost + totalMaintenanceCost;
+      const tco = totalMaintenanceCost;
       const variance = totalPurchasedFuel - totalCalculatedFuel;
 
       return (
@@ -231,7 +230,7 @@ const ReportsAnalytics = () => {
                          <AlertTriangle size={18} /> Report Issue
                      </button>
                  )}
-                 <button className="btn btn-success" onClick={() => setShowFuelModal(true)}>Log Fuel Purchase</button>
+                 <button className="btn btn-success" onClick={() => setShowFuelModal(true)}>Log Fuel Token</button>
                  {user?.role !== 'DRIVER' && (
                      <>
                          <button className="btn btn-danger" onClick={handleResetVehicle}>Reset Data</button>
@@ -269,9 +268,9 @@ const ReportsAnalytics = () => {
                </div>
                <div className="col-md-12 mt-3">
                    <div className="p-3 border rounded bg-dark text-white text-center">
-                       <h6 className="text-white opacity-75">Total Cost of Ownership (TCO)</h6>
+                       <h6 className="text-white opacity-75">Total Cost of Ownership (Maintenance Only)</h6>
                        <h2 className="mb-0 text-warning">Rs. {tco.toFixed(2)}</h2>
-                       <small className="opacity-75">Fuel: Rs. {totalFuelCost.toFixed(2)} | Maintenance: Rs. {totalMaintenanceCost.toFixed(2)}</small>
+                       <small className="opacity-75">Maintenance: Rs. {totalMaintenanceCost.toFixed(2)}</small>
                    </div>
                </div>
            </div>
@@ -309,28 +308,26 @@ const ReportsAnalytics = () => {
                </div>
                
                <div className="col-lg-6">
-                   <h6 className="fw-bold mb-3 text-secondary">Manual Fuel Purchase Logs</h6>
+                   <h6 className="fw-bold mb-3 text-secondary">Manual Fuel Token Logs</h6>
                    <div className="table-responsive border rounded bg-white">
                       <table className="table table-hover align-middle mb-0">
                         <thead className="table-light">
                           <tr>
-                            <th>Date</th>
+                            <th>Token Date</th>
                             <th>Driver</th>
                             <th>Liters Added</th>
-                            <th>Cost</th>
                           </tr>
                         </thead>
                         <tbody>
                           {fuel_logs?.map(f => (
                               <tr key={f.id}>
-                                  <td className="small">{f.created_at ? new Date(f.created_at.replace(' ', 'T') + 'Z').toLocaleString() : '-'}</td>
+                                  <td className="small">{f.token_date ? new Date(f.token_date).toLocaleDateString() : (f.created_at ? new Date(f.created_at.replace(' ', 'T') + 'Z').toLocaleDateString() : '-')}</td>
                                   <td>{f.first_name ? `${f.first_name} ${f.last_name}` : 'Admin/Unknown'}</td>
                                   <td className="text-success">+{f.liters_added?.toFixed(2)} L</td>
-                                  <td>Rs. {f.cost?.toFixed(2)}</td>
                               </tr>
                           ))}
                           {(!fuel_logs || fuel_logs.length === 0) && (
-                              <tr><td colSpan="4" className="text-center py-4 text-muted">No fuel purchases logged yet.</td></tr>
+                              <tr><td colSpan="3" className="text-center py-4 text-muted">No fuel tokens logged yet.</td></tr>
                           )}
                         </tbody>
                       </table>
@@ -371,7 +368,7 @@ const ReportsAnalytics = () => {
                 <div className="modal-dialog modal-dialog-centered">
                   <div className="modal-content">
                     <div className="modal-header">
-                      <h5 className="modal-title">Log Fuel Purchase</h5>
+                      <h5 className="modal-title">Log Fuel Token</h5>
                       <button type="button" className="btn-close" onClick={() => setShowFuelModal(false)}></button>
                     </div>
                     <form onSubmit={handleFuelSubmit}>
@@ -381,8 +378,8 @@ const ReportsAnalytics = () => {
                           <input type="number" step="0.01" className="form-control" value={fuelForm.liters_added} onChange={e => setFuelForm({...fuelForm, liters_added: e.target.value})} placeholder="e.g. 20" required />
                         </div>
                         <div className="mb-3">
-                          <label className="form-label text-muted">Total Cost (Rs.)</label>
-                          <input type="number" step="0.01" className="form-control" value={fuelForm.cost} onChange={e => setFuelForm({...fuelForm, cost: e.target.value})} placeholder="e.g. 3500" required />
+                          <label className="form-label text-muted">Token Date</label>
+                          <input type="date" className="form-control" value={fuelForm.token_date} onChange={e => setFuelForm({...fuelForm, token_date: e.target.value})} required />
                         </div>
                       </div>
                       <div className="modal-footer">
@@ -446,7 +443,7 @@ const ReportsAnalytics = () => {
   const vehicleMetrics = {};
 
   requests.forEach(r => {
-    const bName = r.branch || 'Other';
+    const bName = r.user_branch || 'Other';
     branchMetrics[bName] = (branchMetrics[bName] || 0) + 1;
 
     const vName = r.license_plate || 'Unassigned';

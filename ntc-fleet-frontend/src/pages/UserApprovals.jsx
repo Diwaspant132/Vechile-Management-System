@@ -2,21 +2,23 @@ import React, { useState, useEffect } from 'react';
 
 const UserApprovals = () => {
   const [pendingAdmins, setPendingAdmins] = useState([]);
+  const [historyAdmins, setHistoryAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState(null);
   const [message, setMessage] = useState({ text: '', type: '' });
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-  const fetchPendingAdmins = async () => {
+  const fetchAdminsData = async () => {
     try {
-      // 🟢 UPDATED: Changed from /api/users/pending to /api/admin/pending-admins
-      const response = await fetch(`${API_URL}/api/admin/pending-admins`);
-      if (response.ok) {
-        const data = await response.json();
-        setPendingAdmins(data);
-      } else {
-        console.error("Failed to fetch. Status:", response.status);
+      const [pendingRes, historyRes] = await Promise.all([
+        fetch(`${API_URL}/api/admin/pending-admins`),
+        fetch(`${API_URL}/api/admin/history-admins`)
+      ]);
+      
+      if (pendingRes.ok && historyRes.ok) {
+        setPendingAdmins(await pendingRes.json());
+        setHistoryAdmins(await historyRes.json());
       }
     } catch (err) {
       console.error("Failed to load registration queues:", err);
@@ -26,7 +28,7 @@ const UserApprovals = () => {
   };
 
   useEffect(() => {
-    fetchPendingAdmins();
+    fetchAdminsData();
   }, []);
 
   const handleApprove = async (userId) => {
@@ -44,7 +46,11 @@ const UserApprovals = () => {
 
       if (response.ok) {
         setMessage({ text: data.message, type: 'success' });
+        const approvedAdmin = pendingAdmins.find(u => u.id === userId);
         setPendingAdmins(pendingAdmins.filter(u => u.id !== userId));
+        if (approvedAdmin) {
+          setHistoryAdmins([{ ...approvedAdmin, status: 'APPROVED' }, ...historyAdmins]);
+        }
       } else {
         setMessage({ text: data.error || 'Approval routine failed.', type: 'danger' });
       }
@@ -60,13 +66,17 @@ const UserApprovals = () => {
 
     setActionLoadingId(userId);
     try {
-      const response = await fetch(`${API_URL}/api/users/remove/${userId}`, {
-        method: 'DELETE'
+      const response = await fetch(`${API_URL}/api/users/reject/${userId}`, {
+        method: 'PUT'
       });
 
       if (response.ok) {
-        setMessage({ text: "Registration request removed.", type: 'warning' });
+        setMessage({ text: "Registration request rejected.", type: 'warning' });
+        const rejectedAdmin = pendingAdmins.find(u => u.id === userId);
         setPendingAdmins(pendingAdmins.filter(u => u.id !== userId));
+        if (rejectedAdmin) {
+          setHistoryAdmins([{ ...rejectedAdmin, status: 'REJECTED' }, ...historyAdmins]);
+        }
       } else {
         setMessage({ text: 'Deletion failed.', type: 'danger' });
       }
@@ -119,8 +129,8 @@ const UserApprovals = () => {
             <tbody>
               {pendingAdmins.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="text-center py-5 text-muted font-monospace">
-                    ✨ Clear Horizon! No Branch Admins are currently waiting for system access.
+                  <td colSpan="5" className="text-center py-4 text-muted font-monospace">
+                    No Branch Admins are currently waiting for system access.
                   </td>
                 </tr>
               ) : (
@@ -155,6 +165,60 @@ const UserApprovals = () => {
                           Remove
                         </button>
                       </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <h5 className="fw-bold text-dark mt-5 mb-3">Admin Activation History</h5>
+      <div className="card border-0 shadow-sm rounded-3 overflow-hidden bg-white p-3">
+        <div className="table-responsive">
+          <table className="table table-hover align-middle mb-0">
+            <thead className="bg-light text-secondary font-monospace small">
+              <tr>
+                <th className="ps-4 py-3">ADMIN NAME</th>
+                <th className="py-3">USERNAME / EMAIL</th>
+                <th className="py-3">STATION POOL</th>
+                <th className="py-3 text-center">PHONE</th>
+                <th className="py-3 text-end pe-4">STATUS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {historyAdmins.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="text-center py-4 text-muted font-monospace">
+                    No historical records found.
+                  </td>
+                </tr>
+              ) : (
+                historyAdmins.map((admin) => (
+                  <tr key={admin.id}>
+                    <td className="ps-4 fw-semibold text-dark">
+                      {admin.first_name} {admin.last_name}
+                    </td>
+                    <td>
+                      <div className="fw-medium text-secondary">{admin.username}</div>
+                      <div className="text-muted small" style={{ fontSize: '0.8rem' }}>{admin.email}</div>
+                    </td>
+                    <td className="fw-bold text-primary font-monospace">
+                      <span className="badge bg-warning text-dark me-2 small" style={{ fontSize: '0.7rem' }}>BRANCH ADMIN</span>
+                      {admin.branch}
+                    </td>
+                    <td className="text-center font-monospace text-muted">{admin.phone_number}</td>
+                    <td className="text-end pe-4">
+                      {admin.status === 'APPROVED' ? (
+                        <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2">
+                          APPROVED
+                        </span>
+                      ) : (
+                        <span className="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-3 py-2">
+                          REJECTED
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))

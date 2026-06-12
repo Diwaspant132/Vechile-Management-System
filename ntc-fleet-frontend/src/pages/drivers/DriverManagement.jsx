@@ -8,14 +8,15 @@ const DriverManagement = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { user } = useAuth();
-  const branch = user?.branch || 'JAWALAKHEL';
+  const branch = user?.branch || '';
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   const fetchData = async () => {
     try {
+      const branchParam = user?.role === 'BRANCH_ADMIN' ? `?branch=${encodeURIComponent(user?.branch || '')}` : '';
       const [driversRes, vehiclesRes] = await Promise.all([
-        fetch(`${API_URL}/api/drivers`),
-        fetch(`${API_URL}/api/vehicles`)
+        fetch(`${API_URL}/api/drivers${branchParam}`),
+        fetch(`${API_URL}/api/vehicles${branchParam}`)
       ]);
       const dData = await driversRes.json();
       const vData = await vehiclesRes.json();

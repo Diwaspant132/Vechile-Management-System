@@ -24,16 +24,17 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchDashboardContext = async () => {
       try {
+        const branchParam = role === 'BRANCH_ADMIN' ? `?branch=${encodeURIComponent(user?.branch || '')}` : '';
         // 1. Fetch live vehicle requests
-        const reqResponse = await fetch(`${API_URL}/api/requests`);
+        const reqResponse = await fetch(`${API_URL}/api/requests${branchParam}`);
         const reqData = await reqResponse.json();
         
         // 2. Fetch live fleet vehicle telemetry data
-        const vecResponse = await fetch(`${API_URL}/api/tracking/vehicles`);
+        const vecResponse = await fetch(`${API_URL}/api/vehicles${branchParam}`);
         const vecData = await vecResponse.json();
 
         // 3. Fetch authentic servicing logs
-        const maintResponse = await fetch(`${API_URL}/api/maintenance`);
+        const maintResponse = await fetch(`${API_URL}/api/maintenance${branchParam}`);
         const maintData = await maintResponse.json();
 
         setRequests(Array.isArray(reqData) ? reqData : []);

@@ -12,7 +12,6 @@ const NotificationPanel = () => {
   useEffect(() => {
     if (!user?.id) return;
     
-    // Initial fetch to get history
     const fetchNotifs = async () => {
       try {
         const res = await fetch(`${API_URL}/api/notifications/${user.id}`);
@@ -24,27 +23,15 @@ const NotificationPanel = () => {
         console.error("Failed to load notifications", err);
       }
     };
+    
+    // Initial fetch
     fetchNotifs();
 
-    // Establish Server-Sent Events (SSE) connection for real-time push
-    const eventSource = new EventSource(`${API_URL}/api/notifications/stream/${user.id}`);
-    
-    eventSource.onmessage = (event) => {
-      try {
-        const newNotif = JSON.parse(event.data);
-        setNotifications(prev => [newNotif, ...prev]);
-      } catch (e) {
-        console.error("Error parsing SSE data:", e);
-      }
-    };
-
-    eventSource.onerror = (error) => {
-      console.error('SSE connection error:', error);
-      // Removed eventSource.close() to allow the browser to automatically reconnect
-    };
+    // Use polling instead of SSE to prevent browser HTTP/1.1 connection exhaustion
+    const interval = setInterval(fetchNotifs, 5000);
 
     return () => {
-      eventSource.close();
+      clearInterval(interval);
     };
   }, [user, API_URL]);
 

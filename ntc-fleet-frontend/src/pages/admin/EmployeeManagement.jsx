@@ -10,17 +10,18 @@ const EmployeeManagement = () => {
   const [activeTab, setActiveTab] = useState('APPROVED'); // 'APPROVED', 'PENDING', 'REJECTED'
   
   const { user } = useAuth();
-  const branch = user?.branch || 'JAWALAKHEL';
+  const branch = user?.branch || '';
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   const fetchEmployees = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/employees`);
+      const branchParam = user?.role === 'BRANCH_ADMIN' ? `?branch=${encodeURIComponent(user?.branch || '')}` : '';
+      const response = await fetch(`${API_URL}/api/employees${branchParam}`);
       if (response.ok) {
         const data = await response.json();
         let filtered = Array.isArray(data) ? data : [];
         if (user?.role === 'BRANCH_ADMIN') {
-          filtered = filtered.filter(emp => emp.branch === branch);
+          // Backend handles branch isolation
         }
         setEmployees(filtered);
       }

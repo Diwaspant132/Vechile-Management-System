@@ -19,12 +19,13 @@ const MaintenanceDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const mRes = await fetch(`${API_URL}/api/maintenance`);
+      const branchParam = user?.role === 'BRANCH_ADMIN' ? `?branch=${encodeURIComponent(user?.branch || '')}` : '';
+      const mRes = await fetch(`${API_URL}/api/maintenance${branchParam}`);
       const mData = await mRes.json();
       setSchedules(Array.isArray(mData) ? mData : []);
 
       if (user?.role !== 'DRIVER') {
-        const vRes = await fetch(`${API_URL}/api/vehicles`);
+        const vRes = await fetch(`${API_URL}/api/vehicles${branchParam}`);
         const vData = await vRes.json();
         setVehicles(Array.isArray(vData) ? vData : []);
       }

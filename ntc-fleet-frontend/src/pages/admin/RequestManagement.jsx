@@ -8,16 +8,17 @@ const RequestManagement = () => {
   const [loading, setLoading] = useState(true);
   
   const { user } = useAuth();
-  const branch = user?.branch || 'JAWALAKHEL';
+  const branch = user?.branch || '';
   
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   const fetchData = async () => {
     try {
+      const branchParam = user?.role === 'BRANCH_ADMIN' ? `?branch=${encodeURIComponent(user?.branch || '')}` : '';
       const [reqRes, drivRes, vehRes] = await Promise.all([
-        fetch(`${API_URL}/api/requests`),
-        fetch(`${API_URL}/api/drivers`),
-        fetch(`${API_URL}/api/vehicles`)
+        fetch(`${API_URL}/api/requests${branchParam}`),
+        fetch(`${API_URL}/api/drivers${branchParam}`),
+        fetch(`${API_URL}/api/vehicles${branchParam}`)
       ]);
       const reqData = await reqRes.json();
       const drivData = await drivRes.json();
@@ -28,9 +29,7 @@ const RequestManagement = () => {
       let filteredVehicles = Array.isArray(vehData) ? vehData.filter(v => v.status === 'AVAILABLE') : [];
 
       if (user?.role === 'BRANCH_ADMIN') {
-        filteredRequests = filteredRequests.filter(req => req.branch === branch);
-        filteredDrivers = filteredDrivers.filter(d => d.current_branch === branch);
-        filteredVehicles = filteredVehicles.filter(v => v.branch === branch);
+        // Redundant client-side filtering removed; backend handles isolation via branchParam
       }
       
       setRequests(filteredRequests);

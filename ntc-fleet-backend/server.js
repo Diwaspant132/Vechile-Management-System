@@ -228,6 +228,28 @@ async function initDB() {
   if (!vInfo.some(col => col.name === 'mileage_kmpl')) {
       await db.exec(`ALTER TABLE vehicles ADD COLUMN mileage_kmpl REAL DEFAULT 15.0;`);
   }
+  if (!vInfo.some(col => col.name === 'bluebook_document_url')) {
+      await db.exec(`ALTER TABLE vehicles ADD COLUMN bluebook_document_url TEXT;`);
+  }
+
+  const fuelLogsInfo = await db.all("PRAGMA table_info(fuel_logs)");
+  if (fuelLogsInfo.length > 0 && !fuelLogsInfo.some(col => col.name === 'token_date')) {
+      await db.exec(`ALTER TABLE fuel_logs ADD COLUMN token_date DATE;`);
+  }
+  
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS vehicle_transfers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      vehicle_id INTEGER,
+      from_branch TEXT,
+      to_branch TEXT,
+      status TEXT DEFAULT 'PENDING',
+      requested_by_admin_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      resolved_at DATETIME,
+      FOREIGN KEY(vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE
+    );
+  `);
   
   console.log("✅ Database initialized with Trip Activation and Live Tracking support.");
 }
@@ -259,6 +281,15 @@ app.post('/api/auth/register', async (req, res) => {
     
     await db.run('COMMIT');
     await logAudit('SECURITY', `New user registered: ${username} (${finalRole})`);
+    
+    // Notify all Super Admins that a new user needs approval
+    if (initialStatus === 'PENDING') {
+      const superAdmins = await db.all("SELECT id FROM users WHERE role = 'SUPER_ADMIN'");
+      for (const admin of superAdmins) {
+        await pushNotification(admin.id, 'warning', `New ${finalRole.replace('_', ' ')} registration pending approval: ${first_name} ${last_name}`);
+      }
+    }
+    
     res.status(201).json({ message: "Registration successful!" });
   } catch (error) { 
     await db.run('ROLLBACK');
@@ -308,9 +339,64 @@ app.put('/api/users/approve/:id', async (req, res) => {
   }
 });
 
+app.get('/api/admin/history-admins', async (req, res) => {
+  try {
+    const history = await db.all("SELECT * FROM users WHERE status IN ('APPROVED', 'REJECTED') AND role = 'BRANCH_ADMIN' ORDER BY id DESC");
+    res.json(history);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch admin history." });
+  }
+});
+
+app.put('/api/users/reject/:id', async (req, res) => {
+  try {
+    const user = await db.get("SELECT * FROM users WHERE id = ?", [req.params.id]);
+    if (!user) return res.status(404).json({ error: "User not found." });
+
+    await db.run("UPDATE users SET status = 'REJECTED' WHERE id = ?", [req.params.id]);
+    
+    // Also mark driver profile as rejected if applicable
+    if (user.role === 'DRIVER') {
+      await db.run("UPDATE drivers SET status = 'REJECTED', registration_status = 'REJECTED' WHERE phone_number = ? AND first_name = ?", [user.phone_number, user.first_name]);
+    }
+    
+    await logAudit('SECURITY', `Registration request rejected for user ID ${req.params.id}.`);
+    res.json({ message: "Registration request rejected successfully!" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to reject user request." });
+  }
+});
+
+app.delete('/api/users/remove/:id', async (req, res) => {
+  try {
+    const user = await db.get("SELECT * FROM users WHERE id = ?", [req.params.id]);
+    if (!user) return res.status(404).json({ error: "User not found." });
+
+    await db.run("DELETE FROM users WHERE id = ?", [req.params.id]);
+    
+    // Cleanup pending driver profile if this was a driver registration
+    if (user.role === 'DRIVER') {
+      await db.run("DELETE FROM drivers WHERE phone_number = ? AND first_name = ?", [user.phone_number, user.first_name]);
+    }
+    
+    await logAudit('SECURITY', `Registration request rejected and removed for user ID ${req.params.id}.`);
+    res.json({ message: "Registration request removed successfully!" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to remove user request." });
+  }
+});
+
 app.get('/api/employees', async (req, res) => {
   try {
-    const employees = await db.all("SELECT id, username, email, first_name, last_name, phone_number, branch, status FROM users WHERE role = 'EMPLOYEE' ORDER BY id DESC");
+    const { branch } = req.query;
+    let query = "SELECT id, username, email, first_name, last_name, phone_number, branch, status FROM users WHERE role = 'EMPLOYEE'";
+    const params = [];
+    if (branch && branch !== 'ALL') {
+      query += " AND branch = ?";
+      params.push(branch);
+    }
+    query += " ORDER BY id DESC";
+    const employees = await db.all(query, params);
     res.json(employees);
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
@@ -326,11 +412,18 @@ app.put('/api/employees/:id/status', async (req, res) => {
 
 app.get('/api/drivers', async (req, res) => {
   try {
-    const drivers = await db.all(`
+    const { branch } = req.query;
+    let query = `
       SELECT d.*, v.license_plate as default_vehicle_plate, v.model as default_vehicle_model
       FROM drivers d
       LEFT JOIN vehicles v ON d.default_vehicle_id = v.id
-    `);
+    `;
+    const params = [];
+    if (branch && branch !== 'ALL') {
+      query += " WHERE d.current_branch = ?";
+      params.push(branch);
+    }
+    const drivers = await db.all(query, params);
     res.json(drivers);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -489,9 +582,15 @@ app.post('/api/drivers/:id/document', upload.single('license_document'), async (
 // Vehicle Management Routes
 app.get('/api/vehicles', async (req, res) => {
   try {
-    const vehicles = await db.all(`
-      SELECT * FROM vehicles
-    `);
+    const { branch } = req.query;
+    let query = "SELECT * FROM vehicles";
+    const params = [];
+    if (branch && branch !== 'ALL') {
+      query += " WHERE branch = ?";
+      params.push(branch);
+    }
+    query += " ORDER BY id DESC";
+    const vehicles = await db.all(query, params);
     res.json(vehicles);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -524,19 +623,36 @@ app.get('/api/driver/my-vehicle/:id', async (req, res) => {
 
 app.post('/api/vehicles', async (req, res) => {
   try {
-    const { license_plate, model, branch, mileage_kmpl } = req.body;
+    const { license_plate, model, branch, mileage_kmpl, initial_distance } = req.body;
     if (!license_plate || !branch) return res.status(400).json({ error: "License plate and branch are required" });
     
     const mileage = parseFloat(mileage_kmpl) || 15.0;
+    const distance = parseFloat(initial_distance) || 0;
     
-    await db.run(
-      `INSERT INTO vehicles (license_plate, model, branch, status, total_distance, mileage_kmpl) VALUES (?, ?, ?, 'AVAILABLE', 0, ?)`, 
-      [license_plate, model, branch, mileage]
+    const result = await db.run(
+      `INSERT INTO vehicles (license_plate, model, branch, status, total_distance, mileage_kmpl) VALUES (?, ?, ?, 'AVAILABLE', ?, ?)`, 
+      [license_plate, model, branch, distance, mileage]
     );
-    await logAudit('MUTATION', `New vehicle registered: ${license_plate} (${model}) for branch ${branch}.`);
-    res.status(200).json({ message: "Vehicle registered successfully!" });
+    await logAudit('MUTATION', `New vehicle registered: ${license_plate} (${model}) for branch ${branch} with initial distance ${distance}km.`);
+    res.status(200).json({ message: "Vehicle registered successfully!", vehicleId: result.lastID });
   } catch (e) { 
     res.status(500).json({ error: e.message }); 
+  }
+});
+
+app.post('/api/vehicles/:id/bluebook', upload.single('bluebook_document'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+    
+    // Create the URL to access the file
+    const fileUrl = `/uploads/documents/${req.file.filename}`;
+    
+    await db.run("UPDATE vehicles SET bluebook_document_url = ? WHERE id = ?", [fileUrl, req.params.id]);
+    res.json({ message: "Bluebook uploaded successfully", url: fileUrl });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
@@ -578,13 +694,13 @@ app.get('/api/vehicles/:id/reports', async (req, res) => {
 app.post('/api/vehicles/:id/fuel', async (req, res) => {
   try {
     const vehicleId = req.params.id;
-    const { driver_id, liters_added, cost } = req.body;
+    const { driver_id, liters_added, token_date } = req.body;
     await db.run(
-      "INSERT INTO fuel_logs (vehicle_id, driver_id, liters_added, cost) VALUES (?, ?, ?, ?)",
-      [vehicleId, driver_id, liters_added, cost]
+      "INSERT INTO fuel_logs (vehicle_id, driver_id, liters_added, token_date) VALUES (?, ?, ?, ?)",
+      [vehicleId, driver_id, liters_added, token_date || new Date().toISOString().split('T')[0]]
     );
-    await logAudit('MUTATION', `Fuel purchase logged for Vehicle ID ${vehicleId} by Driver ID ${driver_id} (${liters_added}L).`);
-    res.json({ message: "Fuel log added successfully." });
+    await logAudit('MUTATION', `Fuel token logged for Vehicle ID ${vehicleId} by Driver ID ${driver_id} (${liters_added}L).`);
+    res.json({ message: "Fuel token logged successfully." });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -606,16 +722,105 @@ app.post('/api/vehicles/:id/reset', async (req, res) => {
   }
 });
 
+// Remove Vehicle
+app.delete('/api/vehicles/:id', async (req, res) => {
+  try {
+    const vehicleId = req.params.id;
+    await db.run("DELETE FROM vehicles WHERE id = ?", [vehicleId]);
+    await logAudit('MUTATION', `Vehicle ID ${vehicleId} permanently removed from system.`);
+    res.json({ message: "Vehicle removed successfully." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Transfer Request
+app.post('/api/vehicles/:id/transfer', async (req, res) => {
+  try {
+    const vehicleId = req.params.id;
+    const { from_branch, requested_by_admin_id } = req.body;
+    await db.run(
+      "INSERT INTO vehicle_transfers (vehicle_id, from_branch, requested_by_admin_id) VALUES (?, ?, ?)",
+      [vehicleId, from_branch, requested_by_admin_id]
+    );
+    await logAudit('MUTATION', `Vehicle transfer request initiated for Vehicle ID ${vehicleId} from ${from_branch}.`);
+    res.json({ message: "Transfer request sent to Super Admin." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get Pending Transfers
+app.get('/api/vehicles/transfers', async (req, res) => {
+  try {
+    const transfers = await db.all(`
+      SELECT t.*, v.license_plate, v.model, u.first_name, u.last_name 
+      FROM vehicle_transfers t
+      LEFT JOIN vehicles v ON t.vehicle_id = v.id
+      LEFT JOIN users u ON t.requested_by_admin_id = u.id
+      WHERE t.status = 'PENDING'
+      ORDER BY t.created_at DESC
+    `);
+    res.json(transfers);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Approve Transfer
+app.post('/api/vehicles/transfers/:id/approve', async (req, res) => {
+  try {
+    const transferId = req.params.id;
+    const { to_branch } = req.body;
+    
+    await db.run("BEGIN TRANSACTION");
+    
+    const transfer = await db.get("SELECT * FROM vehicle_transfers WHERE id = ?", [transferId]);
+    if (!transfer) throw new Error("Transfer request not found");
+    
+    await db.run(
+      "UPDATE vehicle_transfers SET status = 'APPROVED', to_branch = ?, resolved_at = CURRENT_TIMESTAMP WHERE id = ?",
+      [to_branch, transferId]
+    );
+    
+    await db.run("UPDATE vehicles SET branch = ? WHERE id = ?", [to_branch, transfer.vehicle_id]);
+    
+    const receivingAdmins = await db.all("SELECT id FROM users WHERE role = 'BRANCH_ADMIN' AND branch = ?", [to_branch]);
+    const vehicle = await db.get("SELECT license_plate FROM vehicles WHERE id = ?", [transfer.vehicle_id]);
+    
+    for (const admin of receivingAdmins) {
+      await db.run(
+        "INSERT INTO notifications (user_id, type, message) VALUES (?, 'VEHICLE_TRANSFER', ?)",
+        [admin.id, `Vehicle ${vehicle.license_plate} has been transferred to your branch (${to_branch}).`]
+      );
+    }
+    
+    await db.run("COMMIT");
+    await logAudit('MUTATION', `Vehicle transfer ${transferId} approved. Vehicle ${transfer.vehicle_id} moved to ${to_branch}.`);
+    res.json({ message: "Vehicle transferred successfully." });
+  } catch (e) {
+    await db.run("ROLLBACK");
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Maintenance API
 app.get('/api/maintenance', async (req, res) => {
   try {
-    const logs = await db.all(`
+    const { branch } = req.query;
+    let query = `
       SELECT m.*, v.license_plate as plateNumber, v.model as vehicle_model, d.first_name, d.last_name
       FROM maintenance_logs m
       JOIN vehicles v ON m.vehicle_id = v.id
       LEFT JOIN drivers d ON m.reported_by_driver_id = d.id
-      ORDER BY m.id DESC
-    `);
+    `;
+    const params = [];
+    if (branch && branch !== 'ALL') {
+      query += " WHERE v.branch = ?";
+      params.push(branch);
+    }
+    query += " ORDER BY m.id DESC";
+    const logs = await db.all(query, params);
     res.json(logs);
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
@@ -682,13 +887,20 @@ app.post('/api/tracking/update', async (req, res) => {
 
 app.get('/api/tracking/all', async (req, res) => {
   try {
-    const locations = await db.all(`
-      SELECT v.id as vehicle_id, l.latitude, l.longitude, l.last_updated, v.license_plate, v.model, v.status, r.pickup_location, r.destination
+    const { branch } = req.query;
+    let query = `
+      SELECT v.id as vehicle_id, l.latitude, l.longitude, l.last_updated, v.license_plate, v.model, v.status, r.pickup_location, r.destination, v.branch
       FROM vehicles v
       LEFT JOIN vehicle_locations l ON l.vehicle_id = v.id
       LEFT JOIN requests r ON r.vehicle_id = v.id AND r.status IN ('APPROVED', 'IN_PROGRESS')
-      WHERE v.status = 'ON TRIP' OR v.status = 'IN_PROGRESS'
-    `);
+      WHERE (v.status = 'ON TRIP' OR v.status = 'IN_PROGRESS')
+    `;
+    const params = [];
+    if (branch && branch !== 'ALL') {
+      query += " AND v.branch = ?";
+      params.push(branch);
+    }
+    const locations = await db.all(query, params);
     res.json(locations);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -696,12 +908,20 @@ app.get('/api/tracking/all', async (req, res) => {
 });
 
 app.get('/api/requests', async (req, res) => {
-  res.json(await db.all(`
-    SELECT r.*, u.first_name, u.last_name, u.branch, v.license_plate, v.model as vehicle_model 
+  const { branch } = req.query;
+  let query = `
+    SELECT r.*, u.first_name, u.last_name, u.branch as user_branch, v.license_plate, v.model as vehicle_model 
     FROM requests r 
     JOIN users u ON r.employee_id = u.id
     LEFT JOIN vehicles v ON r.vehicle_id = v.id
-  `));
+  `;
+  const params = [];
+  if (branch && branch !== 'ALL') {
+    query += " WHERE u.branch = ?";
+    params.push(branch);
+  }
+  query += " ORDER BY r.id DESC";
+  res.json(await db.all(query, params));
 });
 
 app.get('/api/drivers/:id/current-request', async (req, res) => {

@@ -16,6 +16,7 @@ import ResetPassword from './pages/ResetPassword';
 // Dashboard Layout & Pages
 import MainLayout from './components/MainLayout';
 import SuperDashboard from './pages/superAdmin/SuperDashboard';
+import TransferRequests from './pages/superAdmin/TransferRequests';
 import BranchDashboard from './pages/branchAdmin/BranchDashboard';
 import EmployeeDashboard from './pages/employee/EmployeeDashboard';
 import LiveTracking from './pages/tracking/LiveTracking';
@@ -126,6 +127,7 @@ function App() {
                   <Route path="settings" element={<Settings />} />
                   <Route path="audit-logs" element={<AuditLogs />} />
                   <Route path="user-approvals" element={<UserApprovals />} />
+                  <Route path="transfer-requests" element={<TransferRequests />} />
                 </Route>
 
                 {/* Common Routes */}

@@ -105,7 +105,7 @@ const SuperDashboard = () => {
                       </td>
                       <td>
                         <span className="badge bg-light text-dark border border-light px-2 py-1">
-                          {req.branch ? req.branch.replace('_', ' ') : 'General'}
+                          {req.user_branch ? req.user_branch.replace('_', ' ') : 'General'}
                         </span>
                       </td>
                       <td className="text-dark fw-semibold">{req.destination}</td>

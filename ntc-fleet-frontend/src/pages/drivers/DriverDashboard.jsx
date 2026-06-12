@@ -19,7 +19,7 @@ const DriverDashboard = () => {
       const drvData = await drvRes.json();
       
       const myProfile = Array.isArray(drvData) 
-        ? drvData.find(d => String(d.phone_number) === String(user?.phone_number)) 
+        ? drvData.find(d => String(d.phone_number) === String(user?.phone_number) && String(d.first_name).toLowerCase() === String(user?.first_name).toLowerCase()) 
         : null;
       
       setDriverDetails(myProfile);

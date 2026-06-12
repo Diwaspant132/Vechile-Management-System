@@ -1,13 +1,10 @@
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 
-async function run() {
-  const db = await open({ filename: './ntc_fleet.db', driver: sqlite3.Database });
-  const assignments = await db.all("SELECT * FROM driver_vehicle_assignments");
-  console.log("ASSIGNMENTS:", assignments);
-  const vehicles = await db.all("SELECT * FROM vehicles");
-  console.log("VEHICLES:", vehicles);
-  const drivers = await db.all("SELECT * FROM drivers");
-  console.log("DRIVERS:", drivers);
-}
-run();
+(async () => {
+  const db = await open({ filename: 'ntc_vms.db', driver: sqlite3.Database });
+  const users = await db.all("SELECT id, username, first_name, last_name, phone_number, branch FROM users WHERE role = 'DRIVER'");
+  console.log('USERS:', users);
+  const drivers = await db.all("SELECT id, first_name, last_name, phone_number, current_branch FROM drivers");
+  console.log('DRIVERS:', drivers);
+})();

@@ -1,10 +1,11 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
 import FormInput from '../components/FormInput';
 import PasswordInput from '../components/PasswordInput';
 import RoleDropdown from '../components/RoleDropdown';
 import Loader from '../components/Loader';
+import { NTC_BRANCHES } from '../data/branches';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -66,7 +67,7 @@ const Register = () => {
         role: formData.requested_role, // Backend logic uses this
         requested_role: formData.requested_role,
         phone_number: formData.phone_number,
-        branch: formData.requested_role === 'SUPER_ADMIN' ? 'BHADRAKALI_HO' : formData.branch
+        branch: formData.requested_role === 'SUPER_ADMIN' ? 'CENTRAL_OFFICE' : formData.branch
       };
 
       try {
@@ -116,9 +117,9 @@ const Register = () => {
             <div className="mb-3">
               <label className="form-label">Branch *</label>
               <select className="form-select" name="branch" value={formData.branch} onChange={handleChange}>
-                <option value="JAWALAKHEL">Jawalakhel</option>
-                <option value="NAXAL">Naxal</option>
-                <option value="BABARMAHAL">Babarmahal</option>
+                {NTC_BRANCHES.map(b => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
               </select>
             </div>
           )}

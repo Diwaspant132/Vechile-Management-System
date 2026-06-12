@@ -25,7 +25,10 @@ const MapRecenter = ({ lat, lng }) => {
   return null;
 };
 
+import { useAuth } from '../../contexts/AuthContext';
+
 const LiveTracking = () => {
+  const { user } = useAuth();
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
@@ -34,7 +37,8 @@ const LiveTracking = () => {
   useEffect(() => {
     const fetchTelemetry = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/tracking/all`);
+        const branchParam = user?.role === 'BRANCH_ADMIN' ? `?branch=${encodeURIComponent(user?.branch || '')}` : '';
+        const response = await fetch(`${API_URL}/api/tracking/all${branchParam}`);
         const data = await response.json();
         
         const formattedData = data.map(v => ({
@@ -51,8 +55,16 @@ const LiveTracking = () => {
         }));
 
         setVehicles(formattedData);
-        if (formattedData.length > 0 && !selectedVehicle) {
-          setSelectedVehicle(formattedData[0]);
+        if (formattedData.length > 0) {
+          if (!selectedVehicle) {
+            setSelectedVehicle(formattedData[0]);
+          } else {
+            // Keep the selected vehicle's coordinates updated!
+            const updatedCurrent = formattedData.find(v => v.id === selectedVehicle.id);
+            if (updatedCurrent) {
+              setSelectedVehicle(updatedCurrent);
+            }
+          }
         }
         setLoading(false);
       } catch (error) {
