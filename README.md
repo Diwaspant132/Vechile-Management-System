@@ -1,6 +1,20 @@
 # 🚐 Nepal Telecom (NTC) Enterprise Vehicle Management System
 
+![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
+![NodeJS](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)
+![Express.js](https://img.shields.io/badge/express.js-%23404d59.svg?style=for-the-badge&logo=express&logoColor=%2361DAFB)
+![SQLite](https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white)
+![Bootstrap](https://img.shields.io/badge/bootstrap-%238511FA.svg?style=for-the-badge&logo=bootstrap&logoColor=white)
+
 An enterprise-grade, multi-tenant fleet management and telemetry platform designed specifically for Nepal Telecom (NTC). This system provides strict data isolation across different regional branches (Jawalakhel, Babar Mahal, etc.), ensuring secure, role-based access for fleet administrators, drivers, and employees.
+
+---
+
+## 📸 Screenshots
+*(Add your screenshots here by dragging and dropping them into the GitHub editor!)*
+* **Live GPS Tracking & Telemetry**
+* **Role-Based Fleet Analytics**
+* **Branch-Isolated Request Management**
 
 ---
 
