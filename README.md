@@ -11,10 +11,21 @@ An enterprise-grade, multi-tenant fleet management and telemetry platform design
 ---
 
 ## 📸 Screenshots
-*(Add your screenshots here by dragging and dropping them into the GitHub editor!)*
-* **Live GPS Tracking & Telemetry**
-* **Role-Based Fleet Analytics**
-* **Branch-Isolated Request Management**
+
+### 1. Global Monitoring Dashboard
+<img src="https://raw.githubusercontent.com/Diwaspant132/Vechile-Management-System/main/assets/5_global_dashboard.png" width="800">
+
+### 2. Live GPS Tracking & Telemetry
+<img src="https://raw.githubusercontent.com/Diwaspant132/Vechile-Management-System/main/assets/1_live_tracking.png" width="800">
+
+### 3. Role-Based Fleet Analytics
+<img src="https://raw.githubusercontent.com/Diwaspant132/Vechile-Management-System/main/assets/2_reports_analytics.png" width="800">
+
+### 4. Branch-Isolated Request Management
+<img src="https://raw.githubusercontent.com/Diwaspant132/Vechile-Management-System/main/assets/3_request_management.png" width="800">
+
+### 5. Driver Trip Management Console
+<img src="https://raw.githubusercontent.com/Diwaspant132/Vechile-Management-System/main/assets/4_trip_management.png" width="800">
 
 ---
 
