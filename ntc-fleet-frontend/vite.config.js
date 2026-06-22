@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['ntc-logo.png', 'icon.svg'],
+      includeAssets: ['ntc-logo.png'],
       manifest: {
         name: 'NTC Vehicle Management System',
         short_name: 'NTC Fleet',
@@ -19,19 +19,19 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'icon.svg',
+            src: 'ntc-logo.png',
             sizes: '192x192',
-            type: 'image/svg+xml'
+            type: 'image/png'
           },
           {
-            src: 'icon.svg',
+            src: 'ntc-logo.png',
             sizes: '512x512',
-            type: 'image/svg+xml'
+            type: 'image/png'
           },
           {
-            src: 'icon.svg',
+            src: 'ntc-logo.png',
             sizes: '512x512',
-            type: 'image/svg+xml',
+            type: 'image/png',
             purpose: 'any maskable'
           }
         ]
