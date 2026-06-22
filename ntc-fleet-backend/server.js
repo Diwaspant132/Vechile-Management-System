@@ -973,6 +973,30 @@ app.put('/api/requests/status/:id', async (req, res) => {
       if (requestData.driver_id) await db.run("UPDATE drivers SET status = 'AVAILABLE' WHERE id = ?", [requestData.driver_id]);
       if (requestData.vehicle_id) await db.run("UPDATE vehicles SET status = 'AVAILABLE' WHERE id = ?", [requestData.vehicle_id]);
     }
+    
+    // Notify users about cancellation
+    if (status === 'CANCELLED') {
+      const reqInfo = await db.get("SELECT employee_id, destination, driver_id FROM requests WHERE id = ?", [requestId]);
+      if (reqInfo) {
+        const userRow = await db.get("SELECT first_name, last_name, branch FROM users WHERE id = ?", [reqInfo.employee_id]);
+        if (userRow && userRow.branch) {
+          const branchAdmins = await db.all("SELECT id FROM users WHERE role = 'BRANCH_ADMIN' AND branch = ?", [userRow.branch]);
+          for (let admin of branchAdmins) {
+            await pushNotification(admin.id, 'warning', `Vehicle request for ${reqInfo.destination} by ${userRow.first_name} was cancelled.`);
+          }
+        }
+        if (reqInfo.driver_id) {
+          const driverInfo = await db.get("SELECT phone_number FROM drivers WHERE id = ?", [reqInfo.driver_id]);
+          if (driverInfo) {
+            const driverUser = await db.get("SELECT id FROM users WHERE phone_number = ? AND role = 'DRIVER'", [driverInfo.phone_number]);
+            if (driverUser) {
+              await pushNotification(driverUser.id, 'warning', `Your assigned trip to ${reqInfo.destination} was cancelled.`);
+            }
+          }
+        }
+      }
+    }
+    
     res.json({ message: "Status updated and availability synced." });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

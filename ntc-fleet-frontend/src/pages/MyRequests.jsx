@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Car, Fuel } from 'lucide-react';
+import { Search, Filter, Car, Fuel, XCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const MyRequests = () => {
@@ -35,6 +35,29 @@ const MyRequests = () => {
     fetchMyRequests();
   }, [API_URL, user]);
 
+  const handleCancelRequest = async (requestId) => {
+    if (!window.confirm("Are you sure you want to cancel this request?")) return;
+    
+    try {
+      const res = await fetch(`${API_URL}/api/requests/status/${requestId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'CANCELLED' })
+      });
+      
+      if (res.ok) {
+        setMyRequests(prev => prev.map(req => 
+          req.id === requestId ? { ...req, status: 'CANCELLED' } : req
+        ));
+      } else {
+        alert("Failed to cancel request.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error cancelling request.");
+    }
+  };
+
   if (loading) return <div className="p-4 text-center text-muted">Loading your booking history...</div>;
 
   return (
@@ -59,6 +82,7 @@ const MyRequests = () => {
                 <th>Scheduled Time</th>
                 <th>Purpose</th>
                 <th className="text-center">Approval Status</th>
+                <th className="text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -75,10 +99,22 @@ const MyRequests = () => {
                   <td className="text-center">
                     <span className={`badge ${
                       (req.status === 'APPROVED') ? 'bg-success' : 
-                      (req.status === 'REJECTED') ? 'bg-danger' : 'bg-warning text-dark'
+                      (req.status === 'REJECTED') ? 'bg-danger' : 
+                      (req.status === 'CANCELLED') ? 'bg-secondary' : 'bg-warning text-dark'
                     }`}>
                       {req.status}
                     </span>
+                  </td>
+                  <td className="text-center">
+                    {(req.status === 'PENDING' || req.status === 'APPROVED') && (
+                      <button 
+                        className="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
+                        onClick={() => handleCancelRequest(req.id)}
+                        title="Cancel Request"
+                      >
+                        <XCircle size={16} /> Cancel
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
