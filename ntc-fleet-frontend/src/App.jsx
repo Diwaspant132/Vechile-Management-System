@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { BranchProvider } from './contexts/BranchContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
 import GlobalErrorBoundary from './components/GlobalErrorBoundary';
@@ -54,93 +55,95 @@ const DashboardRedirect = () => {
 function App() {
   return (
     <GlobalErrorBoundary>
-      <AuthProvider>
-        <BranchProvider>
-          <Toaster position="top-right" toastOptions={{ duration: 4000, style: { background: '#333', color: '#fff' } }} />
-          <Router>
-            <Routes>
-            {/* Auth Routes */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/otp-verification" element={<OTPVerification />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+      <ThemeProvider>
+        <AuthProvider>
+          <BranchProvider>
+            <Toaster position="top-right" toastOptions={{ duration: 4000, style: { background: '#333', color: '#fff' } }} />
+            <Router>
+              <Routes>
+              {/* Auth Routes */}
+              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/otp-verification" element={<OTPVerification />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* Dashboard Routes - Protected */}
-            <Route path="/dashboard" element={<ProtectedRoute />}>
-              <Route element={<MainLayout />}>
-                
-                {/* Dynamic index redirect based on role */}
-                <Route index element={<DashboardRedirect />} />
+              {/* Dashboard Routes - Protected */}
+              <Route path="/dashboard" element={<ProtectedRoute />}>
+                <Route element={<MainLayout />}>
+                  
+                  {/* Dynamic index redirect based on role */}
+                  <Route index element={<DashboardRedirect />} />
 
-                <Route path="super-dashboard" element={
-                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
-                    <SuperDashboard />
-                  </ProtectedRoute>
-                } />
+                  <Route path="super-dashboard" element={
+                    <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                      <SuperDashboard />
+                    </ProtectedRoute>
+                  } />
 
-                <Route path="branch-dashboard" element={
-                  <ProtectedRoute allowedRoles={['BRANCH_ADMIN']}>
-                    <BranchDashboard />
-                  </ProtectedRoute>
-                } />
+                  <Route path="branch-dashboard" element={
+                    <ProtectedRoute allowedRoles={['BRANCH_ADMIN']}>
+                      <BranchDashboard />
+                    </ProtectedRoute>
+                  } />
 
-                <Route path="employee-dashboard" element={
-                  <ProtectedRoute allowedRoles={['EMPLOYEE']}>
-                    <EmployeeDashboard />
-                  </ProtectedRoute>
-                } />
+                  <Route path="employee-dashboard" element={
+                    <ProtectedRoute allowedRoles={['EMPLOYEE']}>
+                      <EmployeeDashboard />
+                    </ProtectedRoute>
+                  } />
 
-                <Route path="unauthorized" element={<Unauthorized />} />
-                
-                {/* Employee & Admin Routes */}
-                <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'BRANCH_ADMIN', 'EMPLOYEE', 'TRANSPORT_OFFICER']} />}>
-                  <Route path="request-vehicle" element={<VehicleRequest />} />
-                  <Route path="vehicles" element={<VehicleAvailability />} />
-                  <Route path="my-requests" element={<MyRequests />} />
+                  <Route path="unauthorized" element={<Unauthorized />} />
+                  
+                  {/* Employee & Admin Routes */}
+                  <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'BRANCH_ADMIN', 'EMPLOYEE', 'TRANSPORT_OFFICER']} />}>
+                    <Route path="request-vehicle" element={<VehicleRequest />} />
+                    <Route path="vehicles" element={<VehicleAvailability />} />
+                    <Route path="my-requests" element={<MyRequests />} />
+                  </Route>
+
+                  {/* DRIVER ONLY ROUTE */}
+                  <Route element={<ProtectedRoute allowedRoles={['DRIVER']} />}>
+                    <Route path="driver-dashboard" element={<DriverDashboard />} />
+                    <Route path="trip-management" element={<TripManagement />} />
+                  </Route>
+
+                  {/* Branch Admin & Super Admin Management Routes */}
+                  <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'BRANCH_ADMIN', 'TRANSPORT_OFFICER']} />}>
+                    <Route path="tracking" element={<LiveTracking />} />
+                    <Route path="admin-requests" element={<RequestManagement />} />
+                    <Route path="branch-vehicles" element={<BranchVehicles />} /> {/* 🟢 ADDED ROUTE */}
+                    <Route path="driver-management" element={<DriverManagement />} />
+                    <Route path="employee-management" element={<EmployeeManagement />} />
+                    <Route path="maintenance" element={<MaintenanceDashboard />} />
+                  </Route>
+                  
+                  {/* Reports Route for Admins and Drivers */}
+                  <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'BRANCH_ADMIN', 'TRANSPORT_OFFICER', 'DRIVER']} />}>
+                    <Route path="reports" element={<ReportsAnalytics />} />
+                  </Route>
+                  
+                  {/* Super Admin Only Routes */}
+                  <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
+                    <Route path="audit-logs" element={<AuditLogs />} />
+                    <Route path="user-approvals" element={<UserApprovals />} />
+                    <Route path="transfer-requests" element={<TransferRequests />} />
+                  </Route>
+
+                  {/* Common Routes */}
+                  <Route path="settings" element={<Settings />} />
+                  <Route path="notifications" element={<Notifications />} />
                 </Route>
-
-                {/* DRIVER ONLY ROUTE */}
-                <Route element={<ProtectedRoute allowedRoles={['DRIVER']} />}>
-                  <Route path="driver-dashboard" element={<DriverDashboard />} />
-                  <Route path="trip-management" element={<TripManagement />} />
-                </Route>
-
-                {/* Branch Admin & Super Admin Management Routes */}
-                <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'BRANCH_ADMIN', 'TRANSPORT_OFFICER']} />}>
-                  <Route path="tracking" element={<LiveTracking />} />
-                  <Route path="admin-requests" element={<RequestManagement />} />
-                  <Route path="branch-vehicles" element={<BranchVehicles />} /> {/* 🟢 ADDED ROUTE */}
-                  <Route path="driver-management" element={<DriverManagement />} />
-                  <Route path="employee-management" element={<EmployeeManagement />} />
-                  <Route path="maintenance" element={<MaintenanceDashboard />} />
-                </Route>
-                
-                {/* Reports Route for Admins and Drivers */}
-                <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'BRANCH_ADMIN', 'TRANSPORT_OFFICER', 'DRIVER']} />}>
-                  <Route path="reports" element={<ReportsAnalytics />} />
-                </Route>
-                
-                {/* Super Admin Only Routes */}
-                <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
-                  <Route path="audit-logs" element={<AuditLogs />} />
-                  <Route path="user-approvals" element={<UserApprovals />} />
-                  <Route path="transfer-requests" element={<TransferRequests />} />
-                </Route>
-
-                {/* Common Routes */}
-                <Route path="settings" element={<Settings />} />
-                <Route path="notifications" element={<Notifications />} />
               </Route>
-            </Route>
 
-            {/* 404 Catch All */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Router>
-      </BranchProvider>
-    </AuthProvider>
+              {/* 404 Catch All */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Router>
+        </BranchProvider>
+      </AuthProvider>
+      </ThemeProvider>
     </GlobalErrorBoundary>
   );
 }

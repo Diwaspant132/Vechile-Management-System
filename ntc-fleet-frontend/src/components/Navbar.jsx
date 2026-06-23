@@ -1,12 +1,14 @@
 import React from 'react';
-import { Menu, User, LogOut } from 'lucide-react';
+import { Menu, User, LogOut, Sun, Moon, Monitor } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import NotificationPanel from './NotificationPanel';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Navbar = ({ toggleSidebar }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   const handleLogout = () => {
     logout();
@@ -31,6 +33,38 @@ const Navbar = ({ toggleSidebar }) => {
           </span>
         </div>
         
+        {/* Theme Toggle */}
+        <div className="dropdown">
+          <button 
+            className="btn btn-link text-dark text-decoration-none p-2" 
+            type="button" 
+            id="themeDropdown" 
+            data-bs-toggle="dropdown" 
+            aria-expanded="false"
+          >
+            {theme === 'light' ? <Sun size={20} className="text-warning" /> : 
+             theme === 'dark' ? <Moon size={20} className="text-primary" /> : 
+             <Monitor size={20} className="text-secondary" />}
+          </button>
+          <ul className="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" aria-labelledby="themeDropdown">
+            <li>
+              <button className={`dropdown-item d-flex align-items-center gap-2 ${theme === 'light' ? 'active' : ''}`} onClick={() => setTheme('light')}>
+                <Sun size={16} /> Light
+              </button>
+            </li>
+            <li>
+              <button className={`dropdown-item d-flex align-items-center gap-2 ${theme === 'dark' ? 'active' : ''}`} onClick={() => setTheme('dark')}>
+                <Moon size={16} /> Dark
+              </button>
+            </li>
+            <li>
+              <button className={`dropdown-item d-flex align-items-center gap-2 ${theme === 'system' ? 'active' : ''}`} onClick={() => setTheme('system')}>
+                <Monitor size={16} /> System
+              </button>
+            </li>
+          </ul>
+        </div>
+
         <NotificationPanel />
 
         <div className="dropdown">
