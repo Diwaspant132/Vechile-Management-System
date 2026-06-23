@@ -11,6 +11,9 @@ import multer from 'multer';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cron from 'node-cron';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { verifyToken, requireRole } from './middleware/auth.js';
 
 dotenv.config();
 
@@ -30,6 +33,47 @@ const __dirname = path.dirname(__filename);
 
 app.use(cors());
 app.use(express.json());
+
+// ---------------------------------------------------------
+// SECURITY HARDENING MIDDLEWARES
+// ---------------------------------------------------------
+app.use(helmet());
+app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" })); // Allow image loading for uploads
+
+// Global API Rate Limiter (Prevent DoS)
+const globalLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 200, // Limit each IP to 200 requests per `window`
+  message: { error: 'Too many requests, please try again later.' }
+});
+app.use('/api/', globalLimiter);
+
+// Strict Authentication Rate Limiter (Prevent Brute Force)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 login attempts
+  message: { error: 'Too many login attempts, please try again after 15 minutes.' }
+});
+app.use('/api/auth/', authLimiter);
+
+// ---------------------------------------------------------
+// GLOBAL JWT AUTHORIZATION & RBAC
+// ---------------------------------------------------------
+// Exclude public auth routes from JWT checks
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/auth/')) return next();
+  if (req.path.startsWith('/tracking/all')) return next(); // Ensure public tracking map doesn't crash if unauth (or require token if private)
+  return verifyToken(req, res, next);
+});
+
+// Enforce Role-Based Access Control (RBAC) on Admin Endpoints
+app.use('/api/admin', requireRole(['SUPER_ADMIN', 'BRANCH_ADMIN']));
+app.use('/api/settings/system', requireRole(['SUPER_ADMIN', 'BRANCH_ADMIN']));
+app.use('/api/settings/geofence', requireRole(['SUPER_ADMIN', 'BRANCH_ADMIN']));
+app.use('/api/vehicles/transfers', requireRole(['SUPER_ADMIN', 'BRANCH_ADMIN']));
+app.use('/api/users/approve', requireRole(['SUPER_ADMIN', 'BRANCH_ADMIN']));
+app.use('/api/users/reject', requireRole(['SUPER_ADMIN', 'BRANCH_ADMIN']));
+app.use('/api/users/remove', requireRole(['SUPER_ADMIN', 'BRANCH_ADMIN']));
 
 // Ensure upload directory exists
 const uploadDir = path.join(__dirname, 'uploads', 'documents');
@@ -1184,6 +1228,8 @@ function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
+const vehicleLastPing = new Map();
+
 const startServer = async () => {
   try {
     await initDB();
@@ -1192,6 +1238,13 @@ const startServer = async () => {
       console.log('Client connected for live tracking');
       
       socket.on('driver_location_update', async (data) => {
+        const now = Date.now();
+        const lastPing = vehicleLastPing.get(data.vehicle_id) || 0;
+        
+        // Rate Limiter: Process max 1 location ping per 2 seconds per vehicle
+        if (now - lastPing < 2000) return;
+        vehicleLastPing.set(data.vehicle_id, now);
+
         socket.broadcast.emit('vehicle_location_updated', data);
         
         try {
