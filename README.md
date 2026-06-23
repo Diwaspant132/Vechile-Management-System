@@ -3,7 +3,7 @@
 ![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
 ![NodeJS](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)
 ![Express.js](https://img.shields.io/badge/express.js-%23404d59.svg?style=for-the-badge&logo=express&logoColor=%2361DAFB)
-![SQLite](https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/postgresql-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Bootstrap](https://img.shields.io/badge/bootstrap-%238511FA.svg?style=for-the-badge&logo=bootstrap&logoColor=white)
 
 An enterprise-grade, multi-tenant fleet management and telemetry platform designed specifically for Nepal Telecom (NTC). This system provides strict data isolation across different regional branches (Jawalakhel, Babar Mahal, etc.), ensuring secure, role-based access for fleet administrators, drivers, and employees.
@@ -58,7 +58,7 @@ An enterprise-grade, multi-tenant fleet management and telemetry platform design
 
 **Backend:**
 * Node.js & Express.js
-* SQLite3 (Development / Production-Ready for local scaling)
+* PostgreSQL (High-concurrency enterprise database)
 * JWT (JSON Web Tokens) for Stateless, Branch-Aware Authentication
 * Multer (For Driver License/Document Uploads)
 * RESTful API Architecture
@@ -82,7 +82,7 @@ cd Vechile-Management-System
 cd ntc-fleet-backend
 npm install
 ```
-*The SQLite database (`ntc_vms.db`) will auto-initialize on the first run with default NTC branches and Super Admin accounts.*
+*Ensure you have PostgreSQL running locally and configured in your `.env` file before running the backend.*
 ```bash
 npm run dev
 ```
@@ -100,7 +100,7 @@ npm run dev
 ---
 
 ## 🗄️ Database Architecture & Migration
-Currently, the system is backed by **SQLite** for rapid deployment and file-based portability. The entire backend query architecture utilizes standard SQL (`JOIN`, `WHERE`, `SELECT`) making it **95% ready for a PostgreSQL migration** should NTC require high-concurrency enterprise scaling in the future.
+The system is backed by **PostgreSQL**, providing high-concurrency enterprise scaling, robust data integrity, and strict transactional support for all NTC operations.
 
 ### Key Database Schemas
 * **`users` & `drivers`:** Dual-table identity management separating standard NTC employees/admins from operational fleet drivers, linked by unique phone numbers and branch assignments.
