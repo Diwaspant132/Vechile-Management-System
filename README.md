@@ -102,6 +102,13 @@ npm run dev
 ## 🗄️ Database Architecture & Migration
 Currently, the system is backed by **SQLite** for rapid deployment and file-based portability. The entire backend query architecture utilizes standard SQL (`JOIN`, `WHERE`, `SELECT`) making it **95% ready for a PostgreSQL migration** should NTC require high-concurrency enterprise scaling in the future.
 
+### Key Database Schemas
+* **`users` & `drivers`:** Dual-table identity management separating standard NTC employees/admins from operational fleet drivers, linked by unique phone numbers and branch assignments.
+* **`requests` & `trips`:** Tracks the lifecycle of a vehicle request from "Pending Employee Submission" to "Branch Admin Approval" to "Active Driver Trip".
+* **`vehicle_locations`:** High-throughput telemetry table storing latitude/longitude pings and timestamps from active driver devices for live tracking.
+* **`notifications`:** Role-based alert system schema supporting unread/read state mutations for instant UI feedback.
+* **`audit_logs`:** Immutable ledger tracking sensitive system mutations (vehicle transfers, employee approvals, driver assignments) for compliance and security oversight.
+
 ---
 
 ## 🔒 Security Posture
