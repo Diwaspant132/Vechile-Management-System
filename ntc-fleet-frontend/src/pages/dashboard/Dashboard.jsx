@@ -25,17 +25,18 @@ const Dashboard = () => {
     const fetchDashboardContext = async () => {
       try {
         const branchParam = role === 'BRANCH_ADMIN' ? `?branch=${encodeURIComponent(user?.branch || '')}` : '';
-        // 1. Fetch live vehicle requests
-        const reqResponse = await fetch(`${API_URL}/api/requests${branchParam}`);
-        const reqData = await reqResponse.json();
-        
-        // 2. Fetch live fleet vehicle telemetry data
-        const vecResponse = await fetch(`${API_URL}/api/vehicles${branchParam}`);
-        const vecData = await vecResponse.json();
+        // Fetch all data in parallel to significantly reduce network latency
+        const [reqResponse, vecResponse, maintResponse] = await Promise.all([
+          fetch(`${API_URL}/api/requests${branchParam}`),
+          fetch(`${API_URL}/api/vehicles${branchParam}`),
+          fetch(`${API_URL}/api/maintenance${branchParam}`)
+        ]);
 
-        // 3. Fetch authentic servicing logs
-        const maintResponse = await fetch(`${API_URL}/api/maintenance${branchParam}`);
-        const maintData = await maintResponse.json();
+        const [reqData, vecData, maintData] = await Promise.all([
+          reqResponse.json(),
+          vecResponse.json(),
+          maintResponse.json()
+        ]);
 
         setRequests(Array.isArray(reqData) ? reqData : []);
         setVehicles(Array.isArray(vecData) ? vecData : []);
