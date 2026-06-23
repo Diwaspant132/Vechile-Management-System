@@ -10,6 +10,7 @@ import fs from 'fs';
 import multer from 'multer';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import cron from 'node-cron';
 
 dotenv.config();
 
@@ -213,6 +214,14 @@ async function initDB() {
       geofence_lat REAL,
       geofence_lng REAL,
       geofence_radius_km REAL DEFAULT 20.0
+    );
+    CREATE TABLE IF NOT EXISTS automated_reports (
+      id SERIAL PRIMARY KEY,
+      report_date DATE UNIQUE,
+      total_trips INTEGER DEFAULT 0,
+      total_fuel_consumed REAL DEFAULT 0,
+      total_distance REAL DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     INSERT INTO system_settings (require_manager_approval) SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM system_settings);
   `);
@@ -1103,6 +1112,15 @@ app.get('/api/settings/notifications/:userId', async (req, res) => {
   }
 });
 
+app.get('/api/reports/automated', async (req, res) => {
+  try {
+    const reports = await db.all("SELECT * FROM automated_reports ORDER BY report_date DESC LIMIT 30");
+    res.json(reports);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Geofence Settings Endpoints
 app.get('/api/settings/geofence/:branch', async (req, res) => {
   try {
@@ -1221,5 +1239,44 @@ const startServer = async () => {
     console.error(err);
   }
 };
+
+// Schedule Daily CRON Job at Midnight
+cron.schedule('0 0 * * *', async () => {
+  try {
+    console.log("Running Daily Automated Analytics CRON Job...");
+    // Since we are using Postgres `CURRENT_DATE`, we can just get today's data
+    const metrics = await db.get(`
+      SELECT 
+        COUNT(id) as total_trips, 
+        SUM(petrol_consumed) as total_fuel, 
+        SUM(distance_km) as total_dist 
+      FROM trip_history 
+      WHERE DATE(end_time) = CURRENT_DATE AND status = 'COMPLETED'
+    `);
+    
+    const today = new Date().toISOString().split('T')[0];
+    const totalTrips = metrics?.total_trips || 0;
+    const totalFuel = metrics?.total_fuel || 0;
+    const totalDist = metrics?.total_dist || 0;
+
+    await db.run(`
+      INSERT INTO automated_reports (report_date, total_trips, total_fuel_consumed, total_distance)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT (report_date) DO UPDATE SET
+      total_trips = EXCLUDED.total_trips,
+      total_fuel_consumed = EXCLUDED.total_fuel_consumed,
+      total_distance = EXCLUDED.total_distance
+    `, [today, totalTrips, totalFuel, totalDist]);
+
+    await logAudit('SYSTEM_REPORT', `Generated daily automated report for ${today}. Trips: ${totalTrips}, Fuel: ${totalFuel}L.`);
+
+    const admins = await db.all("SELECT id FROM users WHERE role IN ('SUPER_ADMIN', 'BRANCH_ADMIN')");
+    for (const admin of admins) {
+      await pushNotification(admin.id, 'info', `Daily Analytics generated for ${today}: ${totalTrips} trips completed.`);
+    }
+  } catch (err) {
+    console.error("Failed to run CRON job:", err);
+  }
+});
 
 startServer();

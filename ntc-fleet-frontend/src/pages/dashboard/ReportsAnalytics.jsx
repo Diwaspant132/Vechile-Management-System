@@ -4,13 +4,16 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
-import { Download } from 'lucide-react';
+import { Download, FileText } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const ReportsAnalytics = () => {
   const { user } = useAuth();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [vehicleData, setVehicleData] = useState(null);
+  const [automatedReports, setAutomatedReports] = useState([]);
   const [showFuelModal, setShowFuelModal] = useState(false);
   const [fuelForm, setFuelForm] = useState({ liters_added: '', token_date: new Date().toISOString().split('T')[0] });
   const [showIssueModal, setShowIssueModal] = useState(false);
@@ -70,6 +73,11 @@ const ReportsAnalytics = () => {
         let processedData = Array.isArray(data) ? data : [];
         // Backend handles branch isolation via branchParam
         
+        const autoRes = await fetch(`${API_URL}/api/reports/automated`);
+        if (autoRes.ok) {
+           setAutomatedReports(await autoRes.json());
+        }
+
         setRequests(processedData);
         setLoading(false);
       } catch (error) {
@@ -477,6 +485,32 @@ const ReportsAnalytics = () => {
     document.body.removeChild(link);
   };
 
+  const exportGlobalPDF = async () => {
+    const element = document.getElementById('analytics-dashboard-content');
+    if (!element) return;
+    try {
+      toast.loading("Generating PDF...", { id: 'pdf-toast' });
+      const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.setFontSize(18);
+      pdf.text("NTC Fleet System - Automated Analytics Report", 14, 15);
+      pdf.setFontSize(11);
+      pdf.setTextColor(100);
+      pdf.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
+      
+      pdf.addImage(imgData, 'PNG', 0, 30, pdfWidth, pdfHeight);
+      pdf.save(`NTC_Fleet_Analytics_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success("PDF Downloaded successfully!", { id: 'pdf-toast' });
+    } catch (e) {
+      console.error("PDF generation failed:", e);
+      toast.error("Failed to generate PDF report.", { id: 'pdf-toast' });
+    }
+  };
+
   return (
     <div className="card p-4 shadow-sm border-0 rounded-3 mt-2">
       <div className="mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -484,12 +518,18 @@ const ReportsAnalytics = () => {
           <h3 className="fw-bold text-primary mb-1">Logistics Reports & Analytics</h3>
           <p className="text-muted mb-0">System metrics calculated dynamically from raw transaction logs.</p>
         </div>
-        <button className="btn btn-outline-primary d-flex align-items-center gap-2 fw-bold" onClick={exportGlobalCSV}>
-          <Download size={18} /> Export CSV
-        </button>
+        <div className="d-flex gap-2">
+          <button className="btn btn-outline-danger d-flex align-items-center gap-2 fw-bold" onClick={exportGlobalPDF}>
+            <FileText size={18} /> Export PDF
+          </button>
+          <button className="btn btn-outline-primary d-flex align-items-center gap-2 fw-bold" onClick={exportGlobalCSV}>
+            <Download size={18} /> Export CSV
+          </button>
+        </div>
       </div>
 
-      <div className="row g-4">
+      <div id="analytics-dashboard-content" className="p-2">
+        <div className="row g-4">
         <div className="col-12 col-md-6">
           <div className="p-3 border rounded bg-light">
             <h6 className="fw-bold text-secondary mb-3">Monthly Trip Volume by Branch</h6>
@@ -537,6 +577,37 @@ const ReportsAnalytics = () => {
             </div>
           </div>
         </div>
+        <div className="col-12 mt-4">
+          <div className="p-3 border rounded bg-light">
+            <h6 className="fw-bold text-secondary mb-3">Daily Automated Aggregates (System Cron)</h6>
+            <div className="table-responsive">
+              <table className="table table-hover align-middle mb-0 bg-white">
+                <thead className="table-light">
+                  <tr className="small text-muted">
+                    <th>Report Date</th>
+                    <th>Total Trips</th>
+                    <th>Total Fuel Consumed</th>
+                    <th>Total Distance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {automatedReports.map(ar => (
+                    <tr key={ar.id}>
+                      <td className="fw-bold">{new Date(ar.report_date).toLocaleDateString()}</td>
+                      <td>{ar.total_trips}</td>
+                      <td className="text-danger">{ar.total_fuel_consumed?.toFixed(2)} L</td>
+                      <td>{ar.total_distance?.toFixed(2)} km</td>
+                    </tr>
+                  ))}
+                  {automatedReports.length === 0 && (
+                    <tr><td colSpan="4" className="text-center text-muted py-4">No automated daily reports generated yet. The CRON job runs at midnight.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
       </div>
     </div>
   );
