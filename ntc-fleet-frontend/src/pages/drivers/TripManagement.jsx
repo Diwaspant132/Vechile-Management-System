@@ -227,7 +227,18 @@ const TripManagementContent = () => {
                       <p className="mb-1 text-truncate"><strong>From:</strong> {currentRequest.pickup_location}</p>
                       <p className="mb-1 text-truncate"><strong>To:</strong> {currentRequest.destination}</p>
                       <p className="mb-1"><strong>Time:</strong> {currentRequest.pickup_time}</p>
-                      <p className="mb-1 text-truncate"><strong>Passenger:</strong> {currentRequest.first_name} {currentRequest.last_name}</p>
+                      <p className="mb-1 text-truncate"><strong>Requester:</strong> {currentRequest.first_name} {currentRequest.last_name}</p>
+                      {currentRequest.passengers && (() => {
+                        try {
+                          const parsed = JSON.parse(currentRequest.passengers);
+                          if (Array.isArray(parsed) && parsed.length > 0) {
+                            return <p className="mb-1 text-truncate"><strong>Other Passengers:</strong> {parsed.join(', ')}</p>;
+                          }
+                        } catch (e) {
+                           return null;
+                        }
+                        return null;
+                      })()}
                       <p className="mb-0 text-muted"><em>"{currentRequest.purpose}"</em></p>
                     </div>
                   </div>
