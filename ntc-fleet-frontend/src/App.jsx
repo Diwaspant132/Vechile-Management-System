@@ -124,13 +124,13 @@ function App() {
                 
                 {/* Super Admin Only Routes */}
                 <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
-                  <Route path="settings" element={<Settings />} />
                   <Route path="audit-logs" element={<AuditLogs />} />
                   <Route path="user-approvals" element={<UserApprovals />} />
                   <Route path="transfer-requests" element={<TransferRequests />} />
                 </Route>
 
                 {/* Common Routes */}
+                <Route path="settings" element={<Settings />} />
                 <Route path="notifications" element={<Notifications />} />
               </Route>
             </Route>
