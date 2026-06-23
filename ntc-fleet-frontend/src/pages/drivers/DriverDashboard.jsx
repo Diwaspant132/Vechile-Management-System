@@ -71,39 +71,10 @@ const DriverDashboard = () => {
     }
   };
 
-  const customStyles = `
-    .premium-card {
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.5);
-      border-radius: 1.25rem;
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    .premium-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 15px 35px rgba(0,0,0,0.08) !important;
-    }
-    .gradient-header {
-      background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .gradient-bg {
-      background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-      min-height: 100vh;
-    }
-    .glass-badge {
-      background: rgba(255,255,255,0.8);
-      backdrop-filter: blur(5px);
-      border: 1px solid rgba(255,255,255,0.5);
-    }
-  `;
-
   if (loading) return <div className="p-4 text-center text-muted">Authenticating dashboard securely...</div>;
 
   return (
-    <div className="container-fluid p-4 gradient-bg">
-      <style>{customStyles}</style>
+    <div className="container-fluid p-4">
       
       <div className="d-flex align-items-center mb-4 pb-3 border-bottom border-secondary border-opacity-10">
         <h2 className="fw-bolder gradient-header mb-0 d-flex align-items-center">
@@ -114,7 +85,7 @@ const DriverDashboard = () => {
 
       <div className="row g-4">
         <div className="col-lg-4">
-          <div className="card p-4 shadow-sm premium-card h-100">
+          <div className="card p-4 shadow-sm dashboard-card h-100">
             <div className="text-center mb-4 pt-2">
               <div className="bg-primary bg-opacity-10 rounded-circle d-inline-flex p-4 mb-3 position-relative shadow-sm">
                 <User size={48} className="text-primary"/>
@@ -172,7 +143,7 @@ const DriverDashboard = () => {
         </div>
 
         <div className="col-lg-8">
-           <div className="card p-5 shadow-sm premium-card h-100 d-flex flex-column">
+           <div className="card p-5 shadow-sm dashboard-card h-100 d-flex flex-column">
              <div className="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
                <div>
                  <h4 className="fw-bolder text-dark mb-1 d-flex align-items-center"><FileText size={28} className="me-2 text-primary"/> Document Vault</h4>
