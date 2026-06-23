@@ -208,6 +208,12 @@ async function initDB() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       resolved_at TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS branch_settings (
+      branch TEXT PRIMARY KEY,
+      geofence_lat REAL,
+      geofence_lng REAL,
+      geofence_radius_km REAL DEFAULT 20.0
+    );
     INSERT INTO system_settings (require_manager_approval) SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM system_settings);
   `);
   
@@ -1092,7 +1098,45 @@ app.get('/api/settings/notifications/:userId', async (req, res) => {
       settings = await db.get("SELECT * FROM user_settings WHERE user_id = ?", [req.params.userId]);
     }
     res.json(settings);
-  } catch (error) { res.status(500).json({ error: error.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Geofence Settings Endpoints
+app.get('/api/settings/geofence/:branch', async (req, res) => {
+  try {
+    const { branch } = req.params;
+    let settings = await db.get("SELECT * FROM branch_settings WHERE branch = ?", [branch]);
+    if (!settings) {
+      settings = { branch, geofence_lat: null, geofence_lng: null, geofence_radius_km: 20.0 };
+    }
+    res.json(settings);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put('/api/settings/geofence/:branch', async (req, res) => {
+  try {
+    const { branch } = req.params;
+    const { geofence_lat, geofence_lng, geofence_radius_km } = req.body;
+    
+    await db.run(
+      `INSERT INTO branch_settings (branch, geofence_lat, geofence_lng, geofence_radius_km) 
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT (branch) DO UPDATE SET 
+       geofence_lat = EXCLUDED.geofence_lat, 
+       geofence_lng = EXCLUDED.geofence_lng, 
+       geofence_radius_km = EXCLUDED.geofence_radius_km`,
+      [branch, geofence_lat, geofence_lng, geofence_radius_km]
+    );
+    
+    await logAudit('SETTINGS', `Updated geofence settings for branch: ${branch}`);
+    res.json({ message: "Geofence settings updated successfully" });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.put('/api/settings/notifications/:userId', async (req, res) => {
@@ -1108,6 +1152,19 @@ process.on('SIGINT', async () => {
   if (db && typeof db.close === 'function') await db.close();
   process.exit(0);
 });
+
+const outOfBoundsVehicles = new Set();
+
+function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
 
 const startServer = async () => {
   try {
@@ -1126,6 +1183,29 @@ const startServer = async () => {
              ON CONFLICT (vehicle_id) DO UPDATE SET latitude = EXCLUDED.latitude, longitude = EXCLUDED.longitude, last_updated = CURRENT_TIMESTAMP`,
             [data.vehicle_id, data.latitude, data.longitude]
           );
+          
+          // Geofencing Check
+          const vehicle = await db.get("SELECT branch, license_plate FROM vehicles WHERE id = ?", [data.vehicle_id]);
+          if (vehicle && vehicle.branch) {
+             const settings = await db.get("SELECT * FROM branch_settings WHERE branch = ?", [vehicle.branch]);
+             if (settings && settings.geofence_lat && settings.geofence_lng && settings.geofence_radius_km) {
+                const dist = calculateHaversineDistance(settings.geofence_lat, settings.geofence_lng, data.latitude, data.longitude);
+                if (dist > settings.geofence_radius_km) {
+                   if (!outOfBoundsVehicles.has(data.vehicle_id)) {
+                      outOfBoundsVehicles.add(data.vehicle_id);
+                      const admins = await db.all("SELECT id FROM users WHERE role = 'BRANCH_ADMIN' AND branch = ?", [vehicle.branch]);
+                      for (const admin of admins) {
+                         await pushNotification(admin.id, 'danger', `GEOFENCE ALERT: Vehicle ${vehicle.license_plate} is ${Math.round(dist)}km outside the operational zone!`);
+                      }
+                      await logAudit('GEOFENCE_VIOLATION', `Vehicle ${vehicle.license_plate} traveled ${Math.round(dist)}km outside the allowed zone.`);
+                   }
+                } else {
+                   if (outOfBoundsVehicles.has(data.vehicle_id)) {
+                      outOfBoundsVehicles.delete(data.vehicle_id);
+                   }
+                }
+             }
+          }
         } catch (e) {
           console.error("Socket DB Save Error:", e.message);
         }

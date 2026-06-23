@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, User, Shield, Bell, Check } from 'lucide-react';
+import { Settings as SettingsIcon, User, Shield, Bell, Check, MapPin } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Settings = () => {
@@ -27,6 +27,12 @@ const Settings = () => {
     push_notif: true
   });
 
+  const [geofence, setGeofence] = useState({
+    geofence_lat: '',
+    geofence_lng: '',
+    geofence_radius_km: 20
+  });
+
   useEffect(() => {
     if (activeTab === 'system') {
       fetch(`${API_URL}/api/settings/system`)
@@ -43,6 +49,14 @@ const Settings = () => {
            email_notif: Boolean(data.email_notif ?? 1),
            sms_notif: Boolean(data.sms_notif ?? 0),
            push_notif: Boolean(data.push_notif ?? 1)
+        })).catch(console.error);
+    } else if (activeTab === 'geofence' && user?.branch) {
+      fetch(`${API_URL}/api/settings/geofence/${encodeURIComponent(user.branch)}`)
+        .then(res => res.json())
+        .then(data => setGeofence({
+           geofence_lat: data.geofence_lat || '',
+           geofence_lng: data.geofence_lng || '',
+           geofence_radius_km: data.geofence_radius_km || 20
         })).catch(console.error);
     }
   }, [activeTab, API_URL, user]);
@@ -96,6 +110,20 @@ const Settings = () => {
     setSaving(false);
   };
 
+  const handleGeofenceSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await fetch(`${API_URL}/api/settings/geofence/${encodeURIComponent(user.branch)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(geofence)
+      });
+      showSuccess();
+    } catch (e) { console.error(e); }
+    setSaving(false);
+  };
+
   return (
     <div>
       <h2 className="page-title d-flex align-items-center gap-2 mb-4">
@@ -135,6 +163,15 @@ const Settings = () => {
               >
                 <Bell size={18} /> Notification Rules
               </button>
+              {(user?.role === 'BRANCH_ADMIN' || user?.role === 'SUPER_ADMIN') && (
+                <button 
+                  className={`list-group-item list-group-item-action border-0 rounded d-flex align-items-center gap-2 mt-1 ${activeTab === 'geofence' ? 'bg-primary text-white' : ''}`}
+                  onClick={() => setActiveTab('geofence')}
+                  style={activeTab === 'geofence' ? { backgroundColor: 'var(--ntc-blue)' } : {}}
+                >
+                  <MapPin size={18} /> Geofencing
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -253,6 +290,38 @@ const Settings = () => {
                     <div className="mt-4 pt-3 border-top">
                       <button type="submit" className="btn btn-ntc" disabled={saving}>
                         {saving ? 'Saving...' : 'Save Rules'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* Geofencing Tab */}
+              {activeTab === 'geofence' && (
+                <div>
+                  <h4 className="mb-4 fw-bold">Geofence Configuration</h4>
+                  <p className="text-muted mb-4">Set the operational center and radius for your branch <strong>({user?.branch})</strong>. Vehicles leaving this zone will trigger a violation alert to all Branch Admins.</p>
+                  
+                  <form onSubmit={handleGeofenceSave}>
+                    <div className="row g-4">
+                      <div className="col-md-6">
+                        <label className="form-label text-muted fw-medium">Base Latitude</label>
+                        <input type="number" step="any" className="form-control" placeholder="e.g. 27.7172" value={geofence.geofence_lat} onChange={e => setGeofence({...geofence, geofence_lat: e.target.value})} required />
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label text-muted fw-medium">Base Longitude</label>
+                        <input type="number" step="any" className="form-control" placeholder="e.g. 85.3240" value={geofence.geofence_lng} onChange={e => setGeofence({...geofence, geofence_lng: e.target.value})} required />
+                      </div>
+                      <div className="col-md-12">
+                        <label className="form-label text-muted fw-medium">Allowed Operating Radius (Kilometers)</label>
+                        <input type="number" step="0.1" className="form-control" value={geofence.geofence_radius_km} onChange={e => setGeofence({...geofence, geofence_radius_km: e.target.value})} required />
+                        <div className="form-text mt-2">Drivers travelling further than {geofence.geofence_radius_km || 0}km from the base coordinates will instantly flag the system.</div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 pt-3 border-top">
+                      <button type="submit" className="btn btn-ntc" disabled={saving}>
+                        {saving ? 'Saving...' : 'Save Geofence Settings'}
                       </button>
                     </div>
                   </form>
