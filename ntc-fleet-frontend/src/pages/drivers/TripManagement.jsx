@@ -354,8 +354,8 @@ const TripManagementContent = () => {
                              <span className="text-muted">-</span>
                            )}
                          </td>
-                         <td>{trip.start_time ? new Date(trip.start_time.replace(' ', 'T') + 'Z').toLocaleString() : '-'}</td>
-                         <td>{trip.end_time ? new Date(trip.end_time.replace(' ', 'T') + 'Z').toLocaleString() : '-'}</td>
+                         <td>{trip.start_time ? new Date(trip.start_time).toLocaleString() : '-'}</td>
+                         <td>{trip.end_time ? new Date(trip.end_time).toLocaleString() : '-'}</td>
                          <td>
                            <span className={`badge ${trip.status === 'ACTIVE' ? 'bg-success' : 'bg-secondary'}`}>
                              {trip.status}
