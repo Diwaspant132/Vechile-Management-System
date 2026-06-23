@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Car, ClipboardCopy, CheckCircle2, AlertCircle, Building2 } from 'lucide-react';
+import DashboardCard from '../../components/DashboardCard';
 import { useAuth } from '../../contexts/AuthContext';
 
 const BranchDashboard = () => {
@@ -60,56 +61,21 @@ const BranchDashboard = () => {
 
       {/* 📊 Executive Count Summary Grid Layout */}
       <div className="row g-4 mb-5">
-        {/* Card 1: Total Fleet Count */}
-        <div className="col-md-4">
-          <div className="card border-0 shadow-sm p-4 bg-white rounded-3 border-start border-primary border-4">
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <span className="text-muted small text-uppercase fw-bold d-block mb-1">Total Assigned Fleet</span>
-                <h2 className="fw-bold mb-0 text-dark">{metrics.totalVehicles} Units</h2>
-              </div>
-              <div className="p-3 bg-primary bg-opacity-10 rounded-3 text-primary">
-                <Car size={28} />
-              </div>
-            </div>
-          </div>
+        <div className="col-12 col-sm-6 col-md-4">
+          <DashboardCard title="Total Assigned Fleet" value={`${metrics.totalVehicles} Units`} icon={<Car size={24} />} color="blue" />
         </div>
-
-        {/* Card 2: Pending Approval Count */}
-        <div className="col-md-4">
-          <div className="card border-0 shadow-sm p-4 bg-white rounded-3 border-start border-warning border-4">
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <span className="text-muted small text-uppercase fw-bold d-block mb-1">Pending Approval Queue</span>
-                <h2 className="fw-bold mb-0 text-warning">{metrics.pendingReqs} Bookings</h2>
-              </div>
-              <div className="p-3 bg-warning bg-opacity-10 rounded-3 text-warning">
-                <AlertCircle size={28} />
-              </div>
-            </div>
-          </div>
+        <div className="col-12 col-sm-6 col-md-4">
+          <DashboardCard title="Pending Approval Queue" value={`${metrics.pendingReqs} Bookings`} icon={<AlertCircle size={24} />} color="warning" />
         </div>
-
-        {/* Card 3: Active Approved Trip Count */}
-        <div className="col-md-4">
-          <div className="card border-0 shadow-sm p-4 bg-white rounded-3 border-start border-success border-4">
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <span className="text-muted small text-uppercase fw-bold d-block mb-1">Active Approved Trips</span>
-                <h2 className="fw-bold mb-0 text-success">{metrics.approvedReqs} In-Transit</h2>
-              </div>
-              <div className="p-3 bg-success bg-opacity-10 rounded-3 text-success">
-                <CheckCircle2 size={28} />
-              </div>
-            </div>
-          </div>
+        <div className="col-12 col-sm-6 col-md-4">
+          <DashboardCard title="Active Approved Trips" value={`${metrics.approvedReqs} In-Transit`} icon={<CheckCircle2 size={24} />} color="green" />
         </div>
       </div>
 
       {/* Quick Status operational banner */}
-      <div className="p-5 bg-light rounded-3 text-center border border-dashed">
-        <h4 className="fw-bold text-secondary mb-2">Fleet Management Engine Engaged</h4>
-        <p className="text-muted max-w-md mx-auto mb-0">
+      <div className="dashboard-card p-5 text-center border-0">
+        <h4 className="fw-bold text-dark mb-2">Fleet Management Engine Engaged</h4>
+        <p className="text-muted max-w-md mx-auto mb-0" style={{ maxWidth: '600px' }}>
           Use the left sidebar menu matrix to issue new tracking telemetry modules or evaluate pending deployment operations.
         </p>
       </div>

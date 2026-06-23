@@ -127,7 +127,7 @@ const SuperDashboard = () => {
         
         {/* Right Sidebar Actions panel */}
         <div className="col-12 col-lg-4">
-          <div className="card border-0 shadow-sm p-3 bg-white" style={{ borderRadius: '10px' }}>
+          <div className="dashboard-card p-4 border-0">
             <div className="card-body">
               <h5 className="fw-bold text-dark mb-4">Global Actions</h5>
               <div className="d-grid gap-3">
