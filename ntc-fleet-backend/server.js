@@ -201,6 +201,11 @@ async function initDB() {
       await db.exec(`ALTER TABLE requests ADD COLUMN vehicle_id INTEGER REFERENCES vehicles(id) ON DELETE SET NULL;`);
   }
 
+  const hasPassengersColumn = requestTableInfo.some(col => col.name === 'passengers');
+  if (!hasPassengersColumn) {
+      await db.exec(`ALTER TABLE requests ADD COLUMN passengers TEXT;`);
+  }
+
   const driverTableInfo = await db.all("PRAGMA table_info(drivers)");
   const hasLicenseDocColumn = driverTableInfo.some(col => col.name === 'license_document_url');
   if (!hasLicenseDocColumn) {
@@ -941,11 +946,13 @@ app.get('/api/drivers/:id/current-request', async (req, res) => {
 
 app.post('/api/requests', async (req, res) => {
   try {
-    const { employee_id, vehicle_type, purpose, pickup_location, destination, pickup_time } = req.body;
+    const { employee_id, vehicle_type, purpose, pickup_location, destination, pickup_time, passengers } = req.body;
     
+    const passengersStr = passengers && passengers.length > 0 ? JSON.stringify(passengers) : null;
+
     // Insert request
-    const result = await db.run(`INSERT INTO requests (employee_id, vehicle_type, purpose, pickup_location, destination, pickup_time, status) VALUES (?, ?, ?, ?, ?, ?, 'PENDING')`, 
-      [employee_id, vehicle_type, purpose, pickup_location, destination, pickup_time]);
+    const result = await db.run(`INSERT INTO requests (employee_id, vehicle_type, purpose, pickup_location, destination, pickup_time, status, passengers) VALUES (?, ?, ?, ?, ?, ?, 'PENDING', ?)`, 
+      [employee_id, vehicle_type, purpose, pickup_location, destination, pickup_time, passengersStr]);
       
     // Notify Branch Admin only (isolate notifications to the specific branch)
     const userRow = await db.get(`SELECT branch FROM users WHERE id = ?`, [employee_id]);

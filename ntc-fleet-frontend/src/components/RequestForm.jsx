@@ -16,14 +16,27 @@ const RequestForm = () => {
   const [showPickupDropdown, setShowPickupDropdown] = useState(false);
   const [showDestDropdown, setShowDestDropdown] = useState(false);
 
+  const [branchEmployees, setBranchEmployees] = useState([]);
+  const [selectedPassengers, setSelectedPassengers] = useState([]);
+  const [showPassengerDropdown, setShowPassengerDropdown] = useState(false);
+
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
     if (user?.branch) {
       const branchObj = NTC_BRANCHES.find(b => b.id === user.branch);
       setPickupLocation(branchObj ? branchObj.name : user.branch);
+
+      fetch(`${API_URL}/api/employees?branch=${user.branch}`)
+        .then(res => res.json())
+        .then(data => {
+            if (Array.isArray(data)) {
+                setBranchEmployees(data.filter(emp => emp.id !== user.id));
+            }
+        })
+        .catch(err => console.error("Failed to fetch branch employees:", err));
     }
-  }, [user]);
+  }, [user, API_URL]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -45,7 +58,8 @@ const RequestForm = () => {
       purpose: purpose.trim(),
       pickup_location: pickupLocation.trim(),
       destination: destination.trim(),
-      pickup_time: pickupTime
+      pickup_time: pickupTime,
+      passengers: selectedPassengers
     };
 
     try {
@@ -137,6 +151,56 @@ const RequestForm = () => {
         <div>
           <label className="form-label fw-semibold text-secondary small">Pickup Date & Time *</label>
           <input type="datetime-local" className="form-control" value={pickupTime} onChange={(e) => setPickupTime(e.target.value)} required />
+        </div>
+
+        <div className="position-relative">
+          <label className="form-label fw-semibold text-secondary small">Passengers (Optional)</label>
+          <div 
+            className="form-control d-flex justify-content-between align-items-center" 
+            onClick={() => setShowPassengerDropdown(!showPassengerDropdown)}
+            style={{ cursor: 'pointer', minHeight: '38px', backgroundColor: '#fff' }}
+          >
+            <span className={selectedPassengers.length === 0 ? "text-muted" : "text-dark"} style={{ textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+              {selectedPassengers.length === 0 
+                ? "Select friends..." 
+                : selectedPassengers.join(', ')}
+            </span>
+            <span className="text-muted small">▼</span>
+          </div>
+          {showPassengerDropdown && (
+            <ul className="dropdown-menu show w-100 position-absolute shadow-sm p-2" style={{ top: '100%', zIndex: 1000, maxHeight: '200px', overflowY: 'auto' }}>
+              {branchEmployees.length === 0 ? (
+                <li className="dropdown-item text-muted small">No other employees found in your branch</li>
+              ) : (
+                branchEmployees.map(emp => {
+                  const empName = `${emp.first_name} ${emp.last_name}`;
+                  const isChecked = selectedPassengers.includes(empName);
+                  return (
+                    <li key={emp.id} className="dropdown-item py-1" onClick={(e) => e.stopPropagation()}>
+                      <div className="form-check">
+                        <input 
+                          className="form-check-input" 
+                          type="checkbox" 
+                          id={`passenger-${emp.id}`}
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedPassengers([...selectedPassengers, empName]);
+                            } else {
+                              setSelectedPassengers(selectedPassengers.filter(p => p !== empName));
+                            }
+                          }}
+                        />
+                        <label className="form-check-label w-100" htmlFor={`passenger-${emp.id}`} style={{ cursor: 'pointer' }}>
+                          {empName}
+                        </label>
+                      </div>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          )}
         </div>
 
         <div>
