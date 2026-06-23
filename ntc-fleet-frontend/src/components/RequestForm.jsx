@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { NTC_BRANCHES } from '../data/branches';
@@ -19,8 +19,21 @@ const RequestForm = () => {
   const [branchEmployees, setBranchEmployees] = useState([]);
   const [selectedPassengers, setSelectedPassengers] = useState([]);
   const [showPassengerDropdown, setShowPassengerDropdown] = useState(false);
+  const passengerDropdownRef = useRef(null);
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (passengerDropdownRef.current && !passengerDropdownRef.current.contains(event.target)) {
+        setShowPassengerDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     if (user?.branch) {
@@ -153,7 +166,7 @@ const RequestForm = () => {
           <input type="datetime-local" className="form-control" value={pickupTime} onChange={(e) => setPickupTime(e.target.value)} required />
         </div>
 
-        <div className="position-relative">
+        <div className="position-relative" ref={passengerDropdownRef}>
           <label className="form-label fw-semibold text-secondary small">Passengers (Optional)</label>
           <div 
             className="form-control d-flex justify-content-between align-items-center" 
