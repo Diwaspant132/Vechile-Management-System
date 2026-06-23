@@ -1,8 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import path from 'path';
@@ -43,20 +42,43 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-let db;
+const { Pool } = pg;
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+const db = {
+  run: async (query, params = []) => {
+    let index = 1;
+    let pgQuery = query.replace(/\?/g, () => `$${index++}`);
+    if (pgQuery.trim().toUpperCase().startsWith('INSERT') && !pgQuery.toUpperCase().includes('RETURNING')) {
+        pgQuery += ' RETURNING id';
+    }
+    const res = await pool.query(pgQuery, params);
+    return { lastID: res.rows.length > 0 ? res.rows[0].id : null, changes: res.rowCount };
+  },
+  get: async (query, params = []) => {
+    let index = 1;
+    const pgQuery = query.replace(/\?/g, () => `$${index++}`);
+    const res = await pool.query(pgQuery, params);
+    return res.rows[0];
+  },
+  all: async (query, params = []) => {
+    let index = 1;
+    const pgQuery = query.replace(/\?/g, () => `$${index++}`);
+    const res = await pool.query(pgQuery, params);
+    return res.rows;
+  },
+  exec: async (query) => {
+    await pool.query(query);
+  }
+};
+
 async function initDB() {
-  db = await open({
-    filename: path.join(__dirname, 'ntc_vms.db'),
-    driver: sqlite3.Database
-  });
-
-  await db.exec(`PRAGMA journal_mode = WAL;`);
-  await db.run('PRAGMA busy_timeout = 30000;');
-  await db.exec(`PRAGMA foreign_keys = ON;`);
-
   await db.exec(`
     CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       username TEXT UNIQUE,
       email TEXT UNIQUE,
       password TEXT,
@@ -68,7 +90,7 @@ async function initDB() {
       status TEXT
     );
     CREATE TABLE IF NOT EXISTS drivers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       first_name TEXT,
       last_name TEXT,
       license_number TEXT UNIQUE,
@@ -77,186 +99,110 @@ async function initDB() {
       current_branch TEXT,
       registration_status TEXT DEFAULT 'PENDING',
       trip_active INTEGER DEFAULT 0,
-      license_document_url TEXT
+      license_document_url TEXT,
+      default_vehicle_id INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS vehicles (
+      id SERIAL PRIMARY KEY,
+      license_plate TEXT UNIQUE,
+      model TEXT,
+      fuel_level INTEGER DEFAULT 100,
+      branch TEXT,
+      status TEXT DEFAULT 'AVAILABLE',
+      total_distance REAL DEFAULT 0,
+      mileage_kmpl REAL DEFAULT 15.0,
+      bluebook_document_url TEXT
     );
     CREATE TABLE IF NOT EXISTS requests (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      employee_id INTEGER,
-      driver_id INTEGER,
-      vehicle_id INTEGER,
+      id SERIAL PRIMARY KEY,
+      employee_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      driver_id INTEGER REFERENCES drivers(id) ON DELETE SET NULL,
+      vehicle_id INTEGER REFERENCES vehicles(id) ON DELETE SET NULL,
       vehicle_type TEXT,
       purpose TEXT,
       pickup_location TEXT,
       destination TEXT,
       pickup_time TEXT,
       status TEXT,
-      FOREIGN KEY(employee_id) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY(driver_id) REFERENCES drivers(id) ON DELETE SET NULL,
-      FOREIGN KEY(vehicle_id) REFERENCES vehicles(id) ON DELETE SET NULL
+      passengers TEXT
     );
     CREATE TABLE IF NOT EXISTS vehicle_locations (
-        vehicle_id INTEGER PRIMARY KEY,
+        vehicle_id INTEGER PRIMARY KEY REFERENCES vehicles(id) ON DELETE CASCADE,
         latitude REAL,
         longitude REAL,
-        last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE
+        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     CREATE TABLE IF NOT EXISTS trip_history (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      driver_id INTEGER,
-      start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-      end_time DATETIME,
+      id SERIAL PRIMARY KEY,
+      driver_id INTEGER REFERENCES drivers(id) ON DELETE CASCADE,
+      vehicle_id INTEGER,
+      start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      end_time TIMESTAMP,
       status TEXT,
-      FOREIGN KEY(driver_id) REFERENCES drivers(id) ON DELETE CASCADE
+      distance_km REAL DEFAULT 0,
+      petrol_consumed REAL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS notifications (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER,
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
       type TEXT,
       message TEXT,
       is_read INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     CREATE TABLE IF NOT EXISTS audit_logs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       type TEXT,
       description TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     CREATE TABLE IF NOT EXISTS system_settings (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       require_manager_approval INTEGER DEFAULT 1,
       auto_assign_drivers INTEGER DEFAULT 0,
       maintenance_alerts INTEGER DEFAULT 1
     );
     CREATE TABLE IF NOT EXISTS user_settings (
-      user_id INTEGER PRIMARY KEY,
+      user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       email_notif INTEGER DEFAULT 1,
       sms_notif INTEGER DEFAULT 0,
-      push_notif INTEGER DEFAULT 1,
-      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+      push_notif INTEGER DEFAULT 1
     );
     CREATE TABLE IF NOT EXISTS fuel_logs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      vehicle_id INTEGER,
-      driver_id INTEGER,
+      id SERIAL PRIMARY KEY,
+      vehicle_id INTEGER REFERENCES vehicles(id) ON DELETE CASCADE,
+      driver_id INTEGER REFERENCES drivers(id) ON DELETE SET NULL,
       liters_added REAL,
       cost REAL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE,
-      FOREIGN KEY(driver_id) REFERENCES drivers(id) ON DELETE SET NULL
+      token_date DATE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     CREATE TABLE IF NOT EXISTS maintenance_logs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      vehicle_id INTEGER,
-      reported_by_driver_id INTEGER,
+      id SERIAL PRIMARY KEY,
+      vehicle_id INTEGER REFERENCES vehicles(id) ON DELETE CASCADE,
+      reported_by_driver_id INTEGER REFERENCES drivers(id) ON DELETE SET NULL,
       service_type TEXT,
       description TEXT,
       cost REAL,
       status TEXT DEFAULT 'PENDING',
-      scheduled_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-      completed_date DATETIME,
-      mechanic_notes TEXT,
-      FOREIGN KEY(vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE,
-      FOREIGN KEY(reported_by_driver_id) REFERENCES drivers(id) ON DELETE SET NULL
+      scheduled_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      completed_date TIMESTAMP,
+      mechanic_notes TEXT
     );
-    INSERT INTO system_settings (id) SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM system_settings WHERE id = 1);
-  `);
-
-  const vehicleTableInfo = await db.all("PRAGMA table_info(vehicles)");
-  const hasBranchColumn = vehicleTableInfo.some(col => col.name === 'branch');
-  
-  if (!hasBranchColumn && vehicleTableInfo.length > 0) {
-      await db.exec(`
-          CREATE TABLE vehicles_new (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              license_plate TEXT UNIQUE,
-              model TEXT,
-              fuel_level INTEGER DEFAULT 100,
-              branch TEXT,
-              status TEXT DEFAULT 'AVAILABLE'
-          );
-          INSERT INTO vehicles_new (id, license_plate, model, fuel_level)
-          SELECT id, license_plate, model, fuel_level FROM vehicles;
-          DROP TABLE vehicles;
-          ALTER TABLE vehicles_new RENAME TO vehicles;
-      `);
-  } else if (vehicleTableInfo.length === 0) {
-      await db.exec(`
-          CREATE TABLE IF NOT EXISTS vehicles (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              license_plate TEXT UNIQUE,
-              model TEXT,
-              fuel_level INTEGER DEFAULT 100,
-              branch TEXT,
-              status TEXT DEFAULT 'AVAILABLE'
-          );
-      `);
-  }
-
-  const requestTableInfo = await db.all("PRAGMA table_info(requests)");
-  const hasVehicleIdColumn = requestTableInfo.some(col => col.name === 'vehicle_id');
-  if (!hasVehicleIdColumn) {
-      await db.exec(`ALTER TABLE requests ADD COLUMN vehicle_id INTEGER REFERENCES vehicles(id) ON DELETE SET NULL;`);
-  }
-
-  const hasPassengersColumn = requestTableInfo.some(col => col.name === 'passengers');
-  if (!hasPassengersColumn) {
-      await db.exec(`ALTER TABLE requests ADD COLUMN passengers TEXT;`);
-  }
-
-  const driverTableInfo = await db.all("PRAGMA table_info(drivers)");
-  const hasLicenseDocColumn = driverTableInfo.some(col => col.name === 'license_document_url');
-  if (!hasLicenseDocColumn) {
-      await db.exec(`ALTER TABLE drivers ADD COLUMN license_document_url TEXT;`);
-  }
-
-  const hasDefaultVehicleColumn = driverTableInfo.some(col => col.name === 'default_vehicle_id');
-  if (!hasDefaultVehicleColumn) {
-      await db.exec(`ALTER TABLE drivers ADD COLUMN default_vehicle_id INTEGER REFERENCES vehicles(id) ON DELETE SET NULL;`);
-  }
-  
-  const tripHistoryInfo = await db.all("PRAGMA table_info(trip_history)");
-  if (!tripHistoryInfo.some(col => col.name === 'distance_km')) {
-      await db.exec(`ALTER TABLE trip_history ADD COLUMN distance_km REAL DEFAULT 0;`);
-      await db.exec(`ALTER TABLE trip_history ADD COLUMN petrol_consumed REAL DEFAULT 0;`);
-  }
-  if (!tripHistoryInfo.some(col => col.name === 'vehicle_id')) {
-      await db.exec(`ALTER TABLE trip_history ADD COLUMN vehicle_id INTEGER;`);
-  }
-
-  const vInfo = await db.all("PRAGMA table_info(vehicles)");
-  if (!vInfo.some(col => col.name === 'total_distance')) {
-      await db.exec(`ALTER TABLE vehicles ADD COLUMN total_distance REAL DEFAULT 0;`);
-  }
-  if (!vInfo.some(col => col.name === 'mileage_kmpl')) {
-      await db.exec(`ALTER TABLE vehicles ADD COLUMN mileage_kmpl REAL DEFAULT 15.0;`);
-  }
-  if (!vInfo.some(col => col.name === 'bluebook_document_url')) {
-      await db.exec(`ALTER TABLE vehicles ADD COLUMN bluebook_document_url TEXT;`);
-  }
-
-  const fuelLogsInfo = await db.all("PRAGMA table_info(fuel_logs)");
-  if (fuelLogsInfo.length > 0 && !fuelLogsInfo.some(col => col.name === 'token_date')) {
-      await db.exec(`ALTER TABLE fuel_logs ADD COLUMN token_date DATE;`);
-  }
-  
-  await db.exec(`
     CREATE TABLE IF NOT EXISTS vehicle_transfers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      vehicle_id INTEGER,
+      id SERIAL PRIMARY KEY,
+      vehicle_id INTEGER REFERENCES vehicles(id) ON DELETE CASCADE,
       from_branch TEXT,
       to_branch TEXT,
       status TEXT DEFAULT 'PENDING',
       requested_by_admin_id INTEGER,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      resolved_at DATETIME,
-      FOREIGN KEY(vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      resolved_at TIMESTAMP
     );
+    INSERT INTO system_settings (require_manager_approval) SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM system_settings);
   `);
   
-  console.log("✅ Database initialized with Trip Activation and Live Tracking support.");
+  console.log("✅ Database initialized with Trip Activation and Live Tracking support (PostgreSQL).");
 }
 
 async function logAudit(type, description) {
@@ -880,8 +826,9 @@ app.post('/api/tracking/update', async (req, res) => {
   const { vehicle_id, latitude, longitude } = req.body;
   try {
     await db.run(
-      `INSERT OR REPLACE INTO vehicle_locations (vehicle_id, latitude, longitude, last_updated) 
-       VALUES (?, ?, ?, CURRENT_TIMESTAMP)`,
+      `INSERT INTO vehicle_locations (vehicle_id, latitude, longitude, last_updated) 
+       VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+       ON CONFLICT (vehicle_id) DO UPDATE SET latitude = EXCLUDED.latitude, longitude = EXCLUDED.longitude, last_updated = CURRENT_TIMESTAMP`,
       [vehicle_id, latitude, longitude]
     );
     res.json({ message: "Location updated" });
