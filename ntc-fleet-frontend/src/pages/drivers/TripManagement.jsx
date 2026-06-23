@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Play, Square, MapPin, History, Car } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
+import { io } from 'socket.io-client';
 
 function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
   const R = 6371e3; // Earth radius in meters
@@ -54,6 +55,22 @@ const TripManagementContent = () => {
 
   const lastPositionRef = useRef(null);
   const accumulatedDistanceRef = useRef(0);
+  const socketRef = useRef(null);
+
+  useEffect(() => {
+    if (isTripActive) {
+      socketRef.current = io(API_URL);
+    } else if (socketRef.current) {
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, [isTripActive, API_URL]);
 
   const fetchData = async () => {
     try {
@@ -186,15 +203,13 @@ const TripManagementContent = () => {
         }
         lastPositionRef.current = { latitude, longitude };
 
-        fetch(`${API_URL}/api/tracking/update`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        if (socketRef.current) {
+          socketRef.current.emit('driver_location_update', {
             vehicle_id: vehicle.id,
             latitude,
             longitude
-          })
-        }).catch(console.error);
+          });
+        }
       },
       (err) => console.error("GPS Error:", err),
       { enableHighAccuracy: true }

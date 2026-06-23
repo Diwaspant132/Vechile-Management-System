@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { Fuel, Gauge, Navigation } from 'lucide-react';
 import L from 'leaflet';
+import { io } from 'socket.io-client';
 
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -35,6 +36,8 @@ const LiveTracking = () => {
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
+    let socket;
+    
     const fetchTelemetry = async () => {
       try {
         const branchParam = user?.role === 'BRANCH_ADMIN' ? `?branch=${encodeURIComponent(user?.branch || '')}` : '';
@@ -56,15 +59,11 @@ const LiveTracking = () => {
 
         setVehicles(formattedData);
         if (formattedData.length > 0) {
-          if (!selectedVehicle) {
-            setSelectedVehicle(formattedData[0]);
-          } else {
-            // Keep the selected vehicle's coordinates updated!
-            const updatedCurrent = formattedData.find(v => v.id === selectedVehicle.id);
-            if (updatedCurrent) {
-              setSelectedVehicle(updatedCurrent);
-            }
-          }
+          setSelectedVehicle(prev => {
+             if (!prev) return formattedData[0];
+             const updatedCurrent = formattedData.find(v => v.id === prev.id);
+             return updatedCurrent || prev;
+          });
         }
         setLoading(false);
       } catch (error) {
@@ -74,9 +73,34 @@ const LiveTracking = () => {
     };
 
     fetchTelemetry();
-    const interval = setInterval(fetchTelemetry, 3000);
-    return () => clearInterval(interval);
-  }, [API_URL]);
+    
+    // Setup WebSocket
+    socket = io(API_URL);
+    
+    socket.on('vehicle_location_updated', (data) => {
+      setVehicles(prevVehicles => {
+        const updated = prevVehicles.map(v => {
+          if (v.id === data.vehicle_id) {
+            return { ...v, lat: data.latitude, lng: data.longitude };
+          }
+          return v;
+        });
+        
+        setSelectedVehicle(prevSelected => {
+          if (prevSelected && prevSelected.id === data.vehicle_id) {
+             return { ...prevSelected, lat: data.latitude, lng: data.longitude };
+          }
+          return prevSelected;
+        });
+        
+        return updated;
+      });
+    });
+
+    return () => {
+      if (socket) socket.disconnect();
+    };
+  }, [API_URL, user]);
 
   if (loading) return <div className="p-4 text-center text-muted">Booting real-time GPS terminal systems...</div>;
 

@@ -8,10 +8,19 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import multer from 'multer';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"]
+  }
+});
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'NTC_SUPER_SECRET_KEY_9841';
 
@@ -1096,21 +1105,40 @@ app.put('/api/settings/notifications/:userId', async (req, res) => {
 });
 
 process.on('SIGINT', async () => {
-  if (db) await db.close();
+  if (db && typeof db.close === 'function') await db.close();
   process.exit(0);
 });
 
 const startServer = async () => {
   try {
     await initDB();
-    app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server running on port ${PORT}`));
+    
+    io.on('connection', (socket) => {
+      console.log('Client connected for live tracking');
+      
+      socket.on('driver_location_update', async (data) => {
+        socket.broadcast.emit('vehicle_location_updated', data);
+        
+        try {
+          await db.run(
+            `INSERT INTO vehicle_locations (vehicle_id, latitude, longitude, last_updated) 
+             VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+             ON CONFLICT (vehicle_id) DO UPDATE SET latitude = EXCLUDED.latitude, longitude = EXCLUDED.longitude, last_updated = CURRENT_TIMESTAMP`,
+            [data.vehicle_id, data.latitude, data.longitude]
+          );
+        } catch (e) {
+          console.error("Socket DB Save Error:", e.message);
+        }
+      });
+      
+      socket.on('disconnect', () => {
+        console.log('Client disconnected');
+      });
+    });
+
+    httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server running on port ${PORT}`));
   } catch (err) {
-    if (err.code === 'SQLITE_BUSY') {
-      console.log("Database busy, retrying in 2s...");
-      setTimeout(startServer, 2000);
-    } else {
-      console.error(err);
-    }
+    console.error(err);
   }
 };
 
