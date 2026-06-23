@@ -32,6 +32,7 @@ An enterprise-grade, multi-tenant fleet management and telemetry platform design
 ## ✨ Key Features
 
 * **Strict Multi-Branch Data Isolation:** Queries and dashboards are cryptographically scoped to the authenticated user's branch. A Branch Admin at Babar Mahal cannot view or alter vehicles, drivers, or tracking data belonging to Jawalakhel.
+* **Premium Dynamic UI & Theme Management:** Completely overhauled interface featuring modern glassmorphism, fluid micro-animations, and a seamless, zero-flicker **Dark Mode** toggle with persistent system-theme synchronization.
 * **Role-Based Access Control (RBAC):** Five distinct operational roles:
   * 👑 **Super Admin:** Global oversight, system-wide analytics, and cross-branch transfer approvals.
   * 🏢 **Branch Admin:** Full autonomous control over their specific branch's requests, drivers, and fleet.
@@ -49,7 +50,8 @@ An enterprise-grade, multi-tenant fleet management and telemetry platform design
 **Frontend:**
 * React 18 (Vite)
 * React Router v6 (Protected Routing)
-* Bootstrap 5 & Vanilla CSS (Responsive UI/UX)
+* Context API (Global Theme & State Management)
+* Bootstrap 5 & Vanilla CSS (Responsive UI/UX & Glassmorphism)
 * Lucide React (Iconography)
 * React-Leaflet (Live GPS Tracking Maps)
 * Recharts (Analytics Data Visualization)
