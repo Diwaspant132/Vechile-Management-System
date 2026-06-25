@@ -23,6 +23,7 @@ import EmployeeDashboard from './pages/employee/EmployeeDashboard';
 import LiveTracking from './pages/tracking/LiveTracking';
 import VehicleRequest from './pages/requests/VehicleRequest';
 import VehicleAvailability from './pages/vehicles/VehicleAvailability';
+import SecurityDashboard from './pages/security/SecurityDashboard';
 import BranchVehicles from './pages/admin/BranchVehicles'; // 🟢 IMPORTED
 import RequestManagement from './pages/admin/RequestManagement';
 import EmployeeManagement from './pages/admin/EmployeeManagement';
@@ -49,6 +50,7 @@ const DashboardRedirect = () => {
   if (user.role === 'DRIVER') return <Navigate to="/dashboard/driver-dashboard" replace />;
   if (user.role === 'SUPER_ADMIN') return <Navigate to="/dashboard/super-dashboard" replace />;
   if (user.role === 'EMPLOYEE') return <Navigate to="/dashboard/employee-dashboard" replace />;
+  if (user.role === 'SECURITY') return <Navigate to="/dashboard/security-dashboard" replace />;
   
   return <Navigate to="/dashboard/branch-dashboard" replace />;
 };
@@ -113,6 +115,18 @@ function App() {
                   <Route path="branch-dashboard" element={
                     <ProtectedRoute allowedRoles={['BRANCH_ADMIN']}>
                       <BranchDashboard />
+                    </ProtectedRoute>
+                  } />
+
+                  <Route path="security-dashboard" element={
+                    <ProtectedRoute allowedRoles={['SECURITY']}>
+                      <SecurityDashboard />
+                    </ProtectedRoute>
+                  } />
+
+                  <Route path="security-dashboard" element={
+                    <ProtectedRoute allowedRoles={['SECURITY']}>
+                      <SecurityDashboard />
                     </ProtectedRoute>
                   } />
 
