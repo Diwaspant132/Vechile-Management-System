@@ -29,6 +29,9 @@ const Sidebar = ({ isOpen, closeMobile }) => {
     // Employee Dashboard
     { path: '/dashboard/employee-dashboard', name: t('employee_portal'), icon: <LayoutDashboard />, roles: ['EMPLOYEE'] },
     
+    // Security Dashboard
+    { path: '/dashboard/security-dashboard', name: 'Security Dashboard', icon: <LayoutDashboard />, roles: ['SECURITY'] },
+    
     { path: '/dashboard/request-vehicle', name: t('request_vehicle'), icon: <CarFront />, roles: ['SUPER_ADMIN', 'BRANCH_ADMIN', 'EMPLOYEE', 'TRANSPORT_OFFICER'] },
     
     { path: '/dashboard/my-requests', name: t('my_requests'), icon: <History />, roles: ['SUPER_ADMIN', 'BRANCH_ADMIN', 'EMPLOYEE'] },
@@ -49,6 +52,7 @@ const Sidebar = ({ isOpen, closeMobile }) => {
     
     { path: '/dashboard/driver-management', name: t('driver_management'), icon: <Users />, roles: ['SUPER_ADMIN', 'BRANCH_ADMIN', 'TRANSPORT_OFFICER'] },
     { path: '/dashboard/employee-management', name: t('employee_directory'), icon: <Users />, roles: ['SUPER_ADMIN', 'BRANCH_ADMIN'] },
+    { path: '/dashboard/security-directory', name: 'Security Directory', icon: <Users />, roles: ['SUPER_ADMIN', 'BRANCH_ADMIN'] },
     { path: '/dashboard/reports', name: t('reports_analytics'), icon: <FileBarChart />, roles: ['SUPER_ADMIN', 'BRANCH_ADMIN', 'TRANSPORT_OFFICER'] },
     { path: '/dashboard/maintenance', name: t('maintenance'), icon: <Wrench />, roles: ['SUPER_ADMIN', 'BRANCH_ADMIN', 'TRANSPORT_OFFICER'] },
     { path: '/dashboard/audit-logs', name: t('audit_logs'), icon: <Activity />, roles: ['SUPER_ADMIN'] },

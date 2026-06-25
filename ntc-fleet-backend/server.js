@@ -178,7 +178,8 @@ async function initDB() {
       destination TEXT,
       pickup_time TEXT,
       status TEXT,
-      passengers TEXT
+      passengers TEXT,
+      gate_status TEXT DEFAULT 'WAITING'
     );
     CREATE TABLE IF NOT EXISTS vehicle_locations (
         vehicle_id INTEGER PRIMARY KEY REFERENCES vehicles(id) ON DELETE CASCADE,
@@ -286,7 +287,7 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { username, email, password, first_name, last_name, role, requested_role, phone_number, branch } = req.body;
     const finalRole = role || requested_role || 'EMPLOYEE';
-    const initialStatus = finalRole === 'EMPLOYEE' ? 'APPROVED' : 'PENDING';
+    const initialStatus = ['EMPLOYEE', 'SECURITY'].includes(finalRole) ? 'APPROVED' : 'PENDING';
     const hashedPassword = await bcrypt.hash(password, 10);
     
     await db.run('BEGIN TRANSACTION');
@@ -426,6 +427,30 @@ app.put('/api/employees/:id/status', async (req, res) => {
     await db.run("UPDATE users SET status = ? WHERE id = ?", [status, req.params.id]);
     await logAudit('MUTATION', `Employee ID ${req.params.id} status updated to ${status}.`);
     res.json({ message: "Employee status updated" });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.get('/api/security', async (req, res) => {
+  try {
+    const { branch } = req.query;
+    let query = "SELECT id, username, email, first_name, last_name, phone_number, branch, status FROM users WHERE role = 'SECURITY'";
+    const params = [];
+    if (branch && branch !== 'ALL') {
+      query += " AND branch = ?";
+      params.push(branch);
+    }
+    query += " ORDER BY id DESC";
+    const securityGuards = await db.all(query, params);
+    res.json(securityGuards);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.put('/api/security/:id/status', async (req, res) => {
+  try {
+    const { status } = req.body;
+    await db.run("UPDATE users SET status = ? WHERE id = ?", [status, req.params.id]);
+    await logAudit('MUTATION', `Security ID ${req.params.id} status updated to ${status}.`);
+    res.json({ message: "Security guard status updated" });
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
@@ -930,10 +955,11 @@ app.get('/api/tracking/all', async (req, res) => {
 app.get('/api/requests', async (req, res) => {
   const { branch } = req.query;
   let query = `
-    SELECT r.*, u.first_name, u.last_name, u.branch as user_branch, v.license_plate, v.model as vehicle_model 
+    SELECT r.*, u.first_name, u.last_name, u.branch as user_branch, v.license_plate, v.model as vehicle_model, d.first_name as driver_first_name, d.last_name as driver_last_name, d.phone_number as driver_phone
     FROM requests r 
     JOIN users u ON r.employee_id = u.id
     LEFT JOIN vehicles v ON r.vehicle_id = v.id
+    LEFT JOIN drivers d ON r.driver_id = d.id
   `;
   const params = [];
   if (branch && branch !== 'ALL') {
@@ -1023,6 +1049,17 @@ app.put('/api/requests/status/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+app.put('/api/requests/:id/gate-status', async (req, res) => {
+  try {
+    const { gate_status } = req.body;
+    await db.run("UPDATE requests SET gate_status = ? WHERE id = ?", [gate_status, req.params.id]);
+    await logAudit('SECURITY', `Request #${req.params.id} marked as ${gate_status} by security guard.`);
+    res.json({ message: "Gate status updated successfully" });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.put('/api/requests/assign/:id', async (req, res) => {
   try {
     const { driver_id, vehicle_id } = req.body;
@@ -1037,11 +1074,25 @@ app.put('/api/requests/assign/:id', async (req, res) => {
     }
     
     // Notify Driver
-    const driverInfo = await db.get("SELECT phone_number FROM drivers WHERE id = ?", [driver_id]);
+    const driverInfo = await db.get("SELECT phone_number, first_name, last_name FROM drivers WHERE id = ?", [driver_id]);
     if (driverInfo) {
       const driverUser = await db.get("SELECT id FROM users WHERE phone_number = ? AND role = 'DRIVER'", [driverInfo.phone_number]);
       if (driverUser) {
         await pushNotification(driverUser.id, 'info', `You have been assigned to a new trip #REQ-${requestId}.`);
+      }
+    }
+    
+    
+    // Notify Security Guards in the branch
+    if (reqInfo) {
+      const userRow = await db.get("SELECT branch FROM users WHERE id = ?", [reqInfo.employee_id]);
+      if (userRow && userRow.branch) {
+        const securityGuards = await db.all("SELECT id FROM users WHERE role = 'SECURITY' AND branch = ?", [userRow.branch]);
+        const vehicleInfo = await db.get("SELECT license_plate FROM vehicles WHERE id = ?", [vehicle_id]);
+        for (let guard of securityGuards) {
+          const dName = driverInfo ? `${driverInfo.first_name} ${driverInfo.last_name}` : 'Unknown';
+          await pushNotification(guard.id, 'warning', `Trip Assigned: Driver ${dName} heading to ${reqInfo.destination} with vehicle ${vehicleInfo ? vehicleInfo.license_plate : 'Unknown'}.`);
+        }
       }
     }
     
@@ -1251,7 +1302,7 @@ const startServer = async () => {
           await db.run(
             `INSERT INTO vehicle_locations (vehicle_id, latitude, longitude, last_updated) 
              VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-             ON CONFLICT (vehicle_id) DO UPDATE SET latitude = EXCLUDED.latitude, longitude = EXCLUDED.longitude, last_updated = CURRENT_TIMESTAMP`,
+             ON CONFLICT (vehicle_id) DO UPDATE SET latitude = EXCLUDED.latitude, longitude = EXCLUDED.longitude, last_updated = CURRENT_TIMESTAMP RETURNING vehicle_id`,
             [data.vehicle_id, data.latitude, data.longitude]
           );
           

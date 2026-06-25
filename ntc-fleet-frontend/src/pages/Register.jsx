@@ -43,7 +43,7 @@ const Register = () => {
     if (!formData.requested_role) newErrors.requested_role = 'Please select a role';
     if (!formData.phone_number) newErrors.phone_number = 'Phone number is required';
     
-    if (['BRANCH_ADMIN', 'EMPLOYEE', 'DRIVER'].includes(formData.requested_role) && !formData.branch) {
+    if (['BRANCH_ADMIN', 'EMPLOYEE', 'DRIVER', 'SECURITY'].includes(formData.requested_role) && !formData.branch) {
       newErrors.branch = 'Please select branch';
     }
     setErrors(newErrors);
@@ -113,7 +113,7 @@ const Register = () => {
           
           <RoleDropdown value={formData.requested_role} onChange={handleChange} error={errors.requested_role} />
 
-          {['EMPLOYEE', 'DRIVER', 'BRANCH_ADMIN'].includes(formData.requested_role) && (
+          {['EMPLOYEE', 'DRIVER', 'BRANCH_ADMIN', 'SECURITY'].includes(formData.requested_role) && (
             <div className="mb-3">
               <label className="form-label">Branch *</label>
               <select className="form-select" name="branch" value={formData.branch} onChange={handleChange}>

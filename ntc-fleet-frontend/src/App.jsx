@@ -26,6 +26,7 @@ import VehicleAvailability from './pages/vehicles/VehicleAvailability';
 import BranchVehicles from './pages/admin/BranchVehicles'; // 🟢 IMPORTED
 import RequestManagement from './pages/admin/RequestManagement';
 import EmployeeManagement from './pages/admin/EmployeeManagement';
+import SecurityManagement from './pages/admin/SecurityManagement';
 import DriverDashboard from './pages/drivers/DriverDashboard';
 import TripManagement from './pages/drivers/TripManagement';
 import DriverManagement from './pages/drivers/DriverManagement';
@@ -143,6 +144,7 @@ function App() {
                     <Route path="branch-vehicles" element={<BranchVehicles />} /> {/* 🟢 ADDED ROUTE */}
                     <Route path="driver-management" element={<DriverManagement />} />
                     <Route path="employee-management" element={<EmployeeManagement />} />
+                    <Route path="security-directory" element={<SecurityManagement />} />
                     <Route path="maintenance" element={<MaintenanceDashboard />} />
                   </Route>
                   

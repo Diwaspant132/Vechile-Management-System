@@ -1,9 +1,48 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import ntcLogo from '../assets/ntc-logo.png';
 import '../styles/auth.css';
 
 const AuthLayout = ({ children }) => {
+  useEffect(() => {
+    const html = document.documentElement;
+    
+    // Function to forcefully strip the dark theme
+    const forceLight = () => {
+      if (html.hasAttribute('data-theme')) {
+        // Save it so we can restore it when the user logs in
+        if (!html.hasAttribute('data-original-theme')) {
+          html.setAttribute('data-original-theme', html.getAttribute('data-theme'));
+        }
+        html.removeAttribute('data-theme');
+      }
+    };
+    
+    // Initial strip
+    forceLight();
+    
+    // Watch for ThemeContext trying to re-apply it
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((m) => {
+        if (m.attributeName === 'data-theme' && html.hasAttribute('data-theme')) {
+          forceLight();
+        }
+      });
+    });
+    
+    observer.observe(html, { attributes: true });
+    
+    // Cleanup and restore when leaving Auth pages
+    return () => {
+      observer.disconnect();
+      const original = html.getAttribute('data-original-theme');
+      if (original) {
+        html.setAttribute('data-theme', original);
+      }
+      html.removeAttribute('data-original-theme');
+    };
+  }, []);
+
   return (
     <div className="auth-container">
       {/* Left Panel - Branding */}
