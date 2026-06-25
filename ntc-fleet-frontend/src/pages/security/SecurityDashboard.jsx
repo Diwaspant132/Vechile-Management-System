@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import toast from '../../utils/toast';
-import { CarFront, MapPin, Clock, Users, ArrowRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { CarFront, MapPin, Clock, Users, ArrowRight, ShieldCheck, CheckCircle2, PlaneTakeoff } from 'lucide-react';
 import { customConfirm } from '../../components/customConfirm';
 import { formatTimeFromUTC } from '../../utils/dateUtils';
 
@@ -170,12 +170,21 @@ const SecurityDashboard = () => {
 
                     <div className="d-flex gap-2 mt-auto">
                       {gateStatus === 'WAITING' && (
-                        <button 
-                          className="btn btn-warning w-100 fw-bold d-flex align-items-center justify-content-center gap-2"
-                          onClick={() => handleGateStatus(trip.id, 'DEPARTED')}
-                        >
-                          <ArrowRight size={18} /> Mark Departed
-                        </button>
+                        <>
+                          <button 
+                            className="btn btn-warning w-100 fw-bold d-flex align-items-center justify-content-center gap-2"
+                            onClick={() => handleGateStatus(trip.id, 'DEPARTED')}
+                          >
+                            <ArrowRight size={18} /> Departed
+                          </button>
+                          <button 
+                            className="btn btn-outline-secondary w-100 fw-bold d-flex align-items-center justify-content-center gap-2"
+                            onClick={() => handleGateStatus(trip.id, 'DEPARTED')}
+                            title="Use this if the vehicle is already offsite (e.g. at the airport) so you can track its return."
+                          >
+                            <PlaneTakeoff size={18} /> Already Offsite
+                          </button>
+                        </>
                       )}
                       {gateStatus === 'DEPARTED' && (
                         <button 
