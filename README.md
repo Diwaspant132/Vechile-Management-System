@@ -35,13 +35,15 @@ An enterprise-grade, multi-tenant fleet management and telemetry platform design
 * **Premium Dynamic UI & Theme Management:** Completely overhauled interface featuring modern glassmorphism, fluid micro-animations, and a seamless, zero-flicker **Dark Mode** toggle with persistent system-theme synchronization.
 * **Role-Based Access Control (RBAC):** Five distinct operational roles:
   * 👑 **Super Admin:** Global oversight, system-wide analytics, and cross-branch transfer approvals.
-  * 🏢 **Branch Admin:** Full autonomous control over their specific branch's requests, drivers, and fleet.
+  * 🏢 **Branch Admin:** Full autonomous control over their specific branch's requests, drivers, and fleet, including Security staff directory management.
   * 🚛 **Transport Officer:** Operational oversight of logistics.
   * 🚙 **Driver:** Dedicated portals for active trip management, live location broadcasting, and fuel logging.
   * 🧑‍💻 **Employee:** Streamlined interface for requesting vehicle dispatches.
+  * 🛡️ **Security Guard:** Dedicated physical gate control dashboard. Tracks vehicle entries and exits, logs exact departure/return timestamps, and automatically resolves off-site pickups.
 * **Real-Time Live Tracking:** Integrated `react-leaflet` telemetry. Live maps automatically isolate active GPS blips to the admin's regional jurisdiction.
 * **Enterprise Analytics:** Comprehensive reporting dashboards using `Recharts` for fuel variance, maintenance TCO (Total Cost of Ownership), and vehicle utilization metrics.
-* **Identity Resolution:** Dual-factor database verification (Phone Number + First Name) prevents profile collisions among drivers and employees.
+* **Physical Gate Security & Timestamping:** Branch Security Guards track real-time physical vehicle movements (Departed/Returned). Includes automated timestamp logging in UTC (converted intelligently to local time) and edge-case handling for vehicles already off-site.
+* **Identity Resolution:** Dual-factor database verification (Phone Number + First Name) prevents profile collisions among drivers, employees, and security staff.
 
 ---
 
