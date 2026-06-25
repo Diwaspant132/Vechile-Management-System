@@ -6,6 +6,7 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import './styles/dashboard.css'
 import 'leaflet/dist/leaflet.css'
 import './index.css'
+import './i18n'
 
 // Global Fetch Interceptor to automatically attach JWT token
 const originalFetch = window.fetch;

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import AuthLayout from '../components/AuthLayout';
 import Loader from '../components/Loader';
+import toast from '../utils/toast';
 
 const OTPVerification = () => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -53,7 +54,7 @@ const OTPVerification = () => {
     setTimeout(() => {
       setIsLoading(false);
       if (otpValue === '123456') {
-        alert('OTP Verified Successfully!');
+        toast.success('OTP Verified Successfully!');
       } else {
         setError('Invalid OTP code. Please try again.');
       }

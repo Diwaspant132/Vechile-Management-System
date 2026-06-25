@@ -35,7 +35,7 @@ const AuditLogs = () => {
 
   const formatTime = (timeString) => {
     if (!timeString) return '';
-    return new Date(timeString.replace(' ', 'T') + 'Z').toLocaleString();
+    return new Date(timeString.replace(' ', 'T').replace(/Z$/, '') + 'Z').toLocaleString();
   };
 
   const exportToCSV = () => {
@@ -46,7 +46,7 @@ const AuditLogs = () => {
     
     events.forEach(log => {
       const desc = log.description ? log.description.replace(/"/g, '""') : '';
-      const date = log.created_at ? new Date(log.created_at.replace(' ', 'T') + 'Z').toLocaleString() : '';
+      const date = log.created_at ? new Date(log.created_at.replace(' ', 'T').replace(/Z$/, '') + 'Z').toLocaleString() : '';
       csvContent += `${log.id},${log.type},"${desc}","${date}"\n`;
     });
     

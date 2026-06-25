@@ -2,13 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { NTC_BRANCHES } from '../data/branches';
+import { useTranslation } from 'react-i18next';
+import toast from '../utils/toast';
 
 const RequestForm = () => {
   const navigate = useNavigate();
   const { user } = useAuth(); 
+  const { t } = useTranslation();
 
   const [pickupLocation, setPickupLocation] = useState('');
   const [destination, setDestination] = useState('');
+  const [pickupDate, setPickupDate] = useState('');
   const [pickupTime, setPickupTime] = useState('');
   const [purpose, setPurpose] = useState('');
   const [errorBanner, setErrorBanner] = useState('');
@@ -60,7 +64,7 @@ const RequestForm = () => {
       return;
     }
 
-    if (!pickupLocation || !destination || !pickupTime || !purpose) {
+    if (!pickupLocation || !destination || !pickupDate || !pickupTime || !purpose) {
       setErrorBanner('Please fill out all booking form fields.');
       return;
     }
@@ -71,7 +75,7 @@ const RequestForm = () => {
       purpose: purpose.trim(),
       pickup_location: pickupLocation.trim(),
       destination: destination.trim(),
-      pickup_time: pickupTime,
+      pickup_time: `${pickupDate}T${pickupTime}`,
       passengers: selectedPassengers
     };
 
@@ -85,7 +89,7 @@ const RequestForm = () => {
       const data = await response.json().catch(() => ({})); 
 
       if (response.ok) {
-        alert('Vehicle request logged into NTC database successfully!');
+        toast.success('Vehicle request logged into NTC database successfully!');
         navigate('/dashboard/my-requests'); 
       } else {
         setErrorBanner(data.error || 'Server rejected the request.');
@@ -106,11 +110,11 @@ const RequestForm = () => {
 
       <form onSubmit={handleSubmit} className="d-flex flex-column gap-3">
         <div className="position-relative">
-          <label className="form-label fw-semibold text-dark small mb-1">Pickup Location *</label>
+          <label className="form-label fw-semibold text-dark small mb-1">{t('pickup_location')}</label>
           <input 
             type="text" 
             className="form-control" 
-            placeholder="Select branch or type location..." 
+            placeholder={t('select_location')} 
             value={pickupLocation} 
             onChange={(e) => setPickupLocation(e.target.value)} 
             onFocus={() => setShowPickupDropdown(true)}
@@ -134,11 +138,11 @@ const RequestForm = () => {
         </div>
 
         <div className="position-relative">
-          <label className="form-label fw-semibold text-secondary small">Destination *</label>
+          <label className="form-label fw-semibold text-secondary small">{t('destination')}</label>
           <input 
             type="text" 
             className="form-control" 
-            placeholder="Select branch or type destination..." 
+            placeholder={t('select_destination')} 
             value={destination} 
             onChange={(e) => setDestination(e.target.value)} 
             onFocus={() => setShowDestDropdown(true)}
@@ -161,13 +165,19 @@ const RequestForm = () => {
           )}
         </div>
 
-        <div>
-          <label className="form-label fw-semibold text-secondary small">Pickup Date & Time *</label>
-          <input type="datetime-local" className="form-control" value={pickupTime} onChange={(e) => setPickupTime(e.target.value)} required />
+        <div className="row g-2">
+          <div className="col-md-6">
+            <label className="form-label fw-semibold text-secondary small">{t('pickup_date')}</label>
+            <input type="date" className="form-control" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} required />
+          </div>
+          <div className="col-md-6">
+            <label className="form-label fw-semibold text-secondary small">{t('pickup_time')}</label>
+            <input type="time" className="form-control" value={pickupTime} onChange={(e) => setPickupTime(e.target.value)} required />
+          </div>
         </div>
 
         <div className="position-relative" ref={passengerDropdownRef}>
-          <label className="form-label fw-semibold text-secondary small">Passengers (Optional)</label>
+          <label className="form-label fw-semibold text-secondary small">{t('passengers_optional')}</label>
           <div 
             className="form-control d-flex justify-content-between align-items-center" 
             onClick={() => setShowPassengerDropdown(!showPassengerDropdown)}
@@ -175,7 +185,7 @@ const RequestForm = () => {
           >
             <span className={selectedPassengers.length === 0 ? "text-muted" : "text-dark"} style={{ textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden' }}>
               {selectedPassengers.length === 0 
-                ? "Select friends..." 
+                ? t('select_friends') 
                 : selectedPassengers.join(', ')}
             </span>
             <span className="text-muted small">▼</span>
@@ -217,12 +227,12 @@ const RequestForm = () => {
         </div>
 
         <div>
-          <label className="form-label fw-semibold text-secondary small">Purpose *</label>
+          <label className="form-label fw-semibold text-secondary small">{t('purpose')}</label>
           <textarea className="form-control" rows="3" value={purpose} onChange={(e) => setPurpose(e.target.value)} required></textarea>
         </div>
 
         <button type="submit" className="btn btn-primary fw-bold py-2.5 mt-2">
-          Submit Trip Request
+          {t('submit_trip_request')}
         </button>
       </form>
     </div>

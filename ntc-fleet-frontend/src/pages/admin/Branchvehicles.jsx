@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { toast } from 'react-hot-toast';
+import toast from '../../utils/toast';
+import { customConfirm } from '../../components/customConfirm';
 
 const BranchVehicles = () => {
   const [vehicles, setVehicles] = useState([]);
@@ -85,7 +86,7 @@ const BranchVehicles = () => {
   };
 
   const handleRemoveVehicle = async (vehicleId, licensePlate) => {
-    if (window.confirm(`Are you sure you want to permanently delete vehicle ${licensePlate} from the system?`)) {
+    if (await customConfirm(`Are you sure you want to permanently delete vehicle ${licensePlate} from the system?`)) {
       try {
         const res = await fetch(`${API_URL}/api/vehicles/${vehicleId}`, { method: 'DELETE' });
         if (res.ok) {
@@ -102,7 +103,7 @@ const BranchVehicles = () => {
   };
 
   const handleTransferRequest = async (vehicleId, licensePlate) => {
-    if (window.confirm(`Send transfer request for vehicle ${licensePlate} to Super Admin?`)) {
+    if (await customConfirm(`Send transfer request for vehicle ${licensePlate} to Super Admin?`)) {
       try {
         const payload = { from_branch: branch, requested_by_admin_id: user.id };
         const res = await fetch(`${API_URL}/api/vehicles/${vehicleId}/transfer`, {

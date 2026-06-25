@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserCheck, Search, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import toast from '../../utils/toast';
 
 const DriverManagement = () => {
   const [drivers, setDrivers] = useState([]);
@@ -40,7 +41,8 @@ const DriverManagement = () => {
       });
       if (!response.ok) throw new Error('Update failed');
       fetchData();
-    } catch (e) { alert('Action failed: ' + e.message); }
+      toast.success('Status updated successfully');
+    } catch (e) { toast.error('Action failed: ' + e.message); }
   };
 
   const handleDefaultVehicleAssign = async (driverId, vehicleId) => {
@@ -52,7 +54,8 @@ const DriverManagement = () => {
       });
       if (!response.ok) throw new Error('Assignment failed');
       fetchData();
-    } catch (e) { alert('Action failed: ' + e.message); }
+      toast.success('Vehicle assigned successfully');
+    } catch (e) { toast.error('Action failed: ' + e.message); }
   };
 
   useEffect(() => { if (user) fetchData(); }, [user]);

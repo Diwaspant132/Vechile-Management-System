@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-
+import { customConfirm } from '../components/customConfirm';
 const UserApprovals = () => {
   const [pendingAdmins, setPendingAdmins] = useState([]);
   const [historyAdmins, setHistoryAdmins] = useState([]);
@@ -62,7 +62,7 @@ const UserApprovals = () => {
   };
 
   const handleRemove = async (userId) => {
-    if (!window.confirm("Are you sure you want to remove this registration request?")) return;
+    if (!(await customConfirm("Are you sure you want to remove this registration request?"))) return;
 
     setActionLoadingId(userId);
     try {

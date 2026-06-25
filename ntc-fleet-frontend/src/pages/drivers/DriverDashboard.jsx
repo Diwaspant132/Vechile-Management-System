@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, FileText, Clock, Truck, Fuel, Play, Square, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
+import toast from '../../utils/toast';
 
 const DriverDashboard = () => {
   const { user } = useAuth();
   const [driverDetails, setDriverDetails] = useState(null);
   const [vehicle, setVehicle] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { t } = useTranslation();
   
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
@@ -43,7 +46,7 @@ const DriverDashboard = () => {
   const handleFileUpload = async () => {
     const file = fileInputRef.current?.files[0];
     if (!file || !driverDetails) {
-      alert("Please select a file first.");
+      toast.error("Please select a file first.");
       return;
     }
 
@@ -60,12 +63,13 @@ const DriverDashboard = () => {
       if (response.ok) {
         fetchData(); 
         if (fileInputRef.current) fileInputRef.current.value = "";
+        toast.success("Document uploaded successfully!");
       } else {
         const errorData = await response.json();
-        alert("Upload failed: " + errorData.error);
+        toast.error("Upload failed: " + errorData.error);
       }
     } catch (e) {
-      alert("Error uploading document: " + e.message);
+      toast.error("Error uploading document: " + e.message);
     } finally {
       setUploading(false);
     }
@@ -79,7 +83,7 @@ const DriverDashboard = () => {
       <div className="d-flex align-items-center mb-4 pb-3 border-bottom border-secondary border-opacity-10">
         <h2 className="fw-bolder gradient-header mb-0 d-flex align-items-center">
           <User className="me-3" size={36} color="#0d6efd" /> 
-          Driver Command Center
+          {t('driver_command_center')}
         </h2>
       </div>
 
@@ -98,7 +102,7 @@ const DriverDashboard = () => {
             </div>
 
             <div className="d-flex justify-content-between align-items-center p-3 bg-light rounded-3 mb-4 border shadow-sm">
-              <span className="text-secondary fw-bold">Current Status</span>
+              <span className="text-secondary fw-bold">{t('current_status')}</span>
               <span className={`badge rounded-pill px-4 py-2 shadow-sm ${driverDetails?.status === 'ON TRIP' ? 'bg-info text-dark' : 'bg-success'}`}>
                 {driverDetails?.status || 'AVAILABLE'}
               </span>
@@ -106,13 +110,13 @@ const DriverDashboard = () => {
 
             <div className="border-top pt-4">
               <h6 className="fw-bold text-dark mb-3 d-flex align-items-center">
-                <Truck size={20} className="me-2 text-primary"/> Assigned Vehicle
+                <Truck size={20} className="me-2 text-primary"/> {t('assigned_vehicle')}
               </h6>
               
               {(!vehicle && !driverDetails?.default_vehicle_plate) ? (
                 <div className="alert alert-secondary border-0 bg-secondary bg-opacity-10 text-center py-4 rounded-4">
                   <Truck size={36} className="text-secondary mb-2 opacity-50" />
-                  <p className="mb-0 text-muted small fw-medium">No vehicle assigned to you at the moment.</p>
+                  <p className="mb-0 text-muted small fw-medium">{t('no_vehicle_assigned')}</p>
                 </div>
               ) : (
                 <div className="bg-white border rounded-4 p-4 shadow-sm position-relative overflow-hidden">
@@ -121,7 +125,7 @@ const DriverDashboard = () => {
                     {vehicle ? (
                         <div className="d-flex justify-content-between align-items-center">
                             <div>
-                                <span className="badge bg-success mb-2">Active Trip Assignment</span><br/>
+                                <span className="badge bg-success mb-2">{t('active_trip_assignment')}</span><br/>
                                 <span className="badge bg-dark px-3 py-2 fs-6 font-monospace shadow-sm rounded-pill">{vehicle.license_plate}</span>
                             </div>
                             <span className="text-primary fw-bolder fs-5">{vehicle.model}</span>
@@ -129,7 +133,7 @@ const DriverDashboard = () => {
                     ) : (
                         <div className="d-flex justify-content-between align-items-center opacity-75">
                             <div>
-                                <span className="badge bg-secondary mb-2">Default Vehicle</span><br/>
+                                <span className="badge bg-secondary mb-2">{t('default_vehicle')}</span><br/>
                                 <span className="badge bg-dark px-3 py-2 fs-6 font-monospace shadow-sm rounded-pill">{driverDetails.default_vehicle_plate}</span>
                             </div>
                             <span className="text-primary fw-bolder fs-5">{driverDetails.default_vehicle_model}</span>
@@ -146,12 +150,12 @@ const DriverDashboard = () => {
            <div className="card p-5 shadow-sm dashboard-card h-100 d-flex flex-column">
              <div className="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
                <div>
-                 <h4 className="fw-bolder text-dark mb-1 d-flex align-items-center"><FileText size={28} className="me-2 text-primary"/> Document Vault</h4>
-                 <p className="text-muted small fw-medium mb-0">Securely manage your verification documents and licenses.</p>
+                 <h4 className="fw-bolder text-dark mb-1 d-flex align-items-center"><FileText size={28} className="me-2 text-primary"/> {t('document_vault')}</h4>
+                 <p className="text-muted small fw-medium mb-0">{t('securely_manage_docs')}</p>
                </div>
                {driverDetails?.license_document_url && (
                  <span className="badge bg-success bg-opacity-10 text-success border border-success px-4 py-2 fs-6 rounded-pill shadow-sm d-flex align-items-center">
-                   <CheckCircle size={18} className="me-2"/> Verified Upload
+                   <CheckCircle size={18} className="me-2"/> {t('verified_upload')}
                  </span>
                )}
              </div>
@@ -162,7 +166,7 @@ const DriverDashboard = () => {
                    <div className="bg-white rounded-circle d-inline-flex p-4 shadow-sm mb-3 text-success">
                      <CheckCircle size={48} />
                    </div>
-                   <h4 className="text-success fw-bolder mb-3">Your License is securely stored!</h4>
+                   <h4 className="text-success fw-bolder mb-3">{t('license_securely_stored')}</h4>
                    <p className="text-muted px-md-5 mb-4 fs-6">Your documents are visible to the Branch Admin for approval and deployment. You're ready to hit the road!</p>
                    
                    <div className="d-flex flex-column flex-md-row align-items-center justify-content-center gap-4">
@@ -183,7 +187,7 @@ const DriverDashboard = () => {
                    <div className="bg-light rounded-circle d-inline-flex p-5 shadow-sm mb-4 border border-white border-4">
                      <FileText size={56} className="text-primary opacity-50"/>
                    </div>
-                   <h4 className="fw-bolder mb-3 text-dark">Upload Your Driver's License</h4>
+                   <h4 className="fw-bolder mb-3 text-dark">{t('upload_license')}</h4>
                    <p className="text-muted mx-auto mb-4 fs-6" style={{ maxWidth: '550px', lineHeight: '1.6' }}>
                      Please provide a high-resolution, legible photo or PDF of your official driver's license. This is required for Branch Admins to assign you to active routes.
                    </p>

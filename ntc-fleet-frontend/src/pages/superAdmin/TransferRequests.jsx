@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
+import toast from '../../utils/toast';
 import { CarFront, MapPin, CheckCircle } from 'lucide-react';
 import { NTC_BRANCHES } from '../../data/branches';
+import { customConfirm } from '../../components/customConfirm';
 
 const TransferRequests = () => {
   const [transfers, setTransfers] = useState([]);
@@ -40,7 +41,7 @@ const TransferRequests = () => {
       return;
     }
 
-    if (window.confirm(`Are you sure you want to transfer this vehicle to ${toBranch}?`)) {
+    if (await customConfirm(`Are you sure you want to transfer this vehicle to ${toBranch}?`)) {
       try {
         const res = await fetch(`${API_URL}/api/vehicles/transfers/${transferId}/approve`, {
           method: 'POST',
@@ -100,7 +101,7 @@ const TransferRequests = () => {
                     </span>
                   </td>
                   <td>{t.first_name} {t.last_name}</td>
-                  <td className="small text-muted">{t.created_at ? new Date(t.created_at.replace(' ', 'T') + 'Z').toLocaleDateString() : '-'}</td>
+                  <td className="small text-muted">{t.created_at ? new Date(t.created_at.replace(' ', 'T').replace(/Z$/, '') + 'Z').toLocaleDateString() : '-'}</td>
                   <td>
                     <select 
                       className="form-select form-select-sm"

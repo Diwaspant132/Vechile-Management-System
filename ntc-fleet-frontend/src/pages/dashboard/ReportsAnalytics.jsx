@@ -3,10 +3,11 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { toast } from 'react-hot-toast';
+import toast from '../../utils/toast';
 import { Download, FileText } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
+import { customConfirm } from '../../components/customConfirm';
 
 const ReportsAnalytics = () => {
   const { user } = useAuth();
@@ -89,7 +90,7 @@ const ReportsAnalytics = () => {
   }, [API_URL, activeVehicleId, user]);
 
   const handleResetVehicle = async () => {
-    if (window.confirm(`Are you sure you want to permanently delete all trip history and reset total distance for vehicle ${activeLicensePlate || vehicleData?.vehicle?.license_plate}?`)) {
+    if (await customConfirm(`Are you sure you want to permanently delete all trip history and reset total distance for vehicle ${activeLicensePlate || vehicleData?.vehicle?.license_plate}?`)) {
       try {
         const res = await fetch(`${API_URL}/api/vehicles/${activeVehicleId}/reset`, { method: 'POST' });
         if (res.ok) {
@@ -302,7 +303,7 @@ const ReportsAnalytics = () => {
                               <tr key={t.id}>
                                   <td>#{t.id}</td>
                                   <td>{t.first_name} {t.last_name}</td>
-                                  <td className="small">{t.end_time ? new Date(t.end_time.replace(' ', 'T') + 'Z').toLocaleString() : '-'}</td>
+                                  <td className="small">{t.end_time ? new Date(t.end_time.replace(' ', 'T').replace(/Z$/, '') + 'Z').toLocaleString() : '-'}</td>
                                   <td>{t.distance_km ? t.distance_km.toFixed(2) : '0.00'} km</td>
                                   <td className="text-danger">{t.petrol_consumed ? t.petrol_consumed.toFixed(2) : '0.00'} L</td>
                               </tr>
@@ -329,7 +330,7 @@ const ReportsAnalytics = () => {
                         <tbody>
                           {fuel_logs?.map(f => (
                               <tr key={f.id}>
-                                  <td className="small">{f.token_date ? new Date(f.token_date).toLocaleDateString() : (f.created_at ? new Date(f.created_at.replace(' ', 'T') + 'Z').toLocaleDateString() : '-')}</td>
+                                  <td className="small">{f.token_date ? new Date(f.token_date).toLocaleDateString() : (f.created_at ? new Date(f.created_at.replace(' ', 'T').replace(/Z$/, '') + 'Z').toLocaleDateString() : '-')}</td>
                                   <td>{f.first_name ? `${f.first_name} ${f.last_name}` : 'Admin/Unknown'}</td>
                                   <td className="text-success">+{f.liters_added?.toFixed(2)} L</td>
                               </tr>
@@ -356,7 +357,7 @@ const ReportsAnalytics = () => {
                         <tbody>
                           {maintenance_logs?.filter(m => m.status === 'COMPLETED').map(m => (
                               <tr key={m.id}>
-                                  <td className="small">{m.completed_date ? new Date(m.completed_date.replace(' ', 'T') + 'Z').toLocaleString() : '-'}</td>
+                                  <td className="small">{m.completed_date ? new Date(m.completed_date.replace(' ', 'T').replace(/Z$/, '') + 'Z').toLocaleString() : '-'}</td>
                                   <td>{m.service_type}</td>
                                   <td className="text-muted small">{m.mechanic_notes || '-'}</td>
                                   <td className="text-danger fw-bold">Rs. {m.cost?.toFixed(2)}</td>

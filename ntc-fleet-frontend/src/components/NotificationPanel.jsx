@@ -53,7 +53,7 @@ const NotificationPanel = () => {
   };
 
   const formatTime = (dateStr) => {
-    const date = new Date(dateStr.replace(' ', 'T') + 'Z');
+    const date = new Date(dateStr.replace(' ', 'T').replace(/Z$/, '') + 'Z');
     const now = new Date();
     const diffMins = Math.floor((now - date) / 60000);
     if (diffMins < 1) return 'Just now';

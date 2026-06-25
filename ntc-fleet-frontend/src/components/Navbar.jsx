@@ -4,11 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import NotificationPanel from './NotificationPanel';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useTranslation } from 'react-i18next';
+import { Globe } from 'lucide-react';
 
 const Navbar = ({ toggleSidebar }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { t, i18n } = useTranslation();
 
   const handleLogout = () => {
     logout();
@@ -22,7 +25,7 @@ const Navbar = ({ toggleSidebar }) => {
           <Menu size={24} />
         </button>
         <h5 className="mb-0 text-primary fw-bold d-none d-sm-block" style={{ color: 'var(--ntc-blue)' }}>
-          Nepal Telecom
+          {t('app_name')}
         </h5>
       </div>
 
@@ -65,6 +68,31 @@ const Navbar = ({ toggleSidebar }) => {
           </ul>
         </div>
 
+        {/* Language Toggle */}
+        <div className="dropdown me-2">
+          <button 
+            className="btn btn-link text-dark text-decoration-none p-2" 
+            type="button" 
+            id="langDropdown" 
+            data-bs-toggle="dropdown" 
+            aria-expanded="false"
+          >
+            <Globe size={20} className="text-secondary" />
+          </button>
+          <ul className="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" aria-labelledby="langDropdown">
+            <li>
+              <button className={`dropdown-item ${i18n.language === 'en' ? 'active' : ''}`} onClick={() => i18n.changeLanguage('en')}>
+                {t('english')}
+              </button>
+            </li>
+            <li>
+              <button className={`dropdown-item ${i18n.language === 'ne' ? 'active' : ''}`} onClick={() => i18n.changeLanguage('ne')}>
+                {t('nepali')}
+              </button>
+            </li>
+          </ul>
+        </div>
+
         <NotificationPanel />
 
         <div className="dropdown">
@@ -85,13 +113,13 @@ const Navbar = ({ toggleSidebar }) => {
           <ul className="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" aria-labelledby="userDropdown">
             <li>
               <button className="dropdown-item" onClick={() => navigate('/dashboard/settings')}>
-                Profile Settings
+                {t('profile_settings')}
               </button>
             </li>
             <li><hr className="dropdown-divider" /></li>
             <li>
               <button className="dropdown-item text-danger d-flex align-items-center gap-2" onClick={handleLogout}>
-                <LogOut size={16} /> Logout
+                <LogOut size={16} /> {t('logout')}
               </button>
             </li>
           </ul>

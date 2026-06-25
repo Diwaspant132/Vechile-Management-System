@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Square, MapPin, History, Car } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { toast } from 'react-hot-toast';
+import toast from '../../utils/toast';
 import { io } from 'socket.io-client';
 
 function calculateHaversineDistance(lat1, lon1, lat2, lon2) {

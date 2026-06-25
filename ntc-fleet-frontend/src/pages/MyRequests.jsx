@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Car, Fuel, XCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import toast from '../utils/toast';
+import { customConfirm } from '../components/customConfirm';
 
 const MyRequests = () => {
   const { user } = useAuth();
@@ -36,7 +38,7 @@ const MyRequests = () => {
   }, [API_URL, user]);
 
   const handleCancelRequest = async (requestId) => {
-    if (!window.confirm("Are you sure you want to cancel this request?")) return;
+    if (!(await customConfirm("Are you sure you want to cancel this request?"))) return;
     
     try {
       const res = await fetch(`${API_URL}/api/requests/status/${requestId}`, {
@@ -49,12 +51,13 @@ const MyRequests = () => {
         setMyRequests(prev => prev.map(req => 
           req.id === requestId ? { ...req, status: 'CANCELLED' } : req
         ));
+        toast.success("Request cancelled successfully.");
       } else {
-        alert("Failed to cancel request.");
+        toast.error("Failed to cancel request.");
       }
     } catch (err) {
       console.error(err);
-      alert("Error cancelling request.");
+      toast.error("Error cancelling request.");
     }
   };
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Wrench, AlertTriangle, CheckCircle2, Clock, Plus } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import toast from '../../utils/toast';
 import { useAuth } from '../../contexts/AuthContext';
 
 const MaintenanceDashboard = () => {

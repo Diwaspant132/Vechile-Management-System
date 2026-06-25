@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Download, FileText, FileSpreadsheet, X } from 'lucide-react';
+import toast from '../../utils/toast';
 
 const ExportModal = ({ show, onClose, title = "Export Report" }) => {
   const [format, setFormat] = useState('pdf');
@@ -12,7 +13,7 @@ const ExportModal = ({ show, onClose, title = "Export Report" }) => {
       setExporting(false);
       onClose();
       // Dummy download trigger
-      alert(`Report exported successfully as ${format.toUpperCase()}`);
+      toast.success(`Report exported successfully as ${format.toUpperCase()}`);
     }, 1500);
   };
 

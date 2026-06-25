@@ -58,7 +58,34 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <BranchProvider>
-            <Toaster position="top-right" toastOptions={{ duration: 4000, style: { background: '#333', color: '#fff' } }} />
+            <Toaster 
+              position="top-center" 
+              containerStyle={{
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+              }}
+              toastOptions={{ 
+                duration: 4000, 
+                style: { 
+                  background: '#1a1f2c', 
+                  color: '#fff',
+                  padding: '16px 24px',
+                  borderRadius: '12px',
+                  fontSize: '16px',
+                  fontWeight: '500',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.4)',
+                  maxWidth: '500px',
+                  textAlign: 'center'
+                },
+                success: {
+                  iconTheme: { primary: '#4ade80', secondary: '#1a1f2c' },
+                },
+                error: {
+                  iconTheme: { primary: '#f87171', secondary: '#1a1f2c' },
+                }
+              }} 
+            />
             <Router>
               <Routes>
               {/* Auth Routes */}

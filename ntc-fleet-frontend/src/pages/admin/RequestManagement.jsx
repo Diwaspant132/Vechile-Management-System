@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
+import toast from '../../utils/toast';
 
 const RequestManagement = () => {
   const [requests, setRequests] = useState([]);
   const [drivers, setDrivers] = useState([]); 
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { t } = useTranslation();
   
   const { user } = useAuth();
   const branch = user?.branch || '';
@@ -53,7 +56,7 @@ const RequestManagement = () => {
     const vehicleId = document.getElementById(`vehicle-${reqId}`).value;
     
     if (!driverId || !vehicleId) {
-      alert("Please select both a driver and a vehicle!");
+      toast.error("Please select both a driver and a vehicle!");
       return;
     }
 
@@ -65,9 +68,10 @@ const RequestManagement = () => {
       });
 
       if (response.ok) {
+        toast.success("Driver and vehicle assigned successfully");
         fetchData();
       } else {
-        alert('Could not assign driver and vehicle.');
+        toast.error('Could not assign driver and vehicle.');
       }
     } catch (error) {
       console.error('Assignment failed:', error);
@@ -83,44 +87,45 @@ const RequestManagement = () => {
       });
 
       if (response.ok) {
+        toast.success("Booking status updated");
         fetchData(); 
       } else {
-        alert('Could not update booking status.');
+        toast.error('Could not update booking status.');
       }
     } catch (error) {
       console.error('Admin mutation action failed:', error);
     }
   };
 
-  if (loading) return <div className="p-4 text-center text-muted">Loading live branch dispatch metrics...</div>;
+  if (loading) return <div className="p-4 text-center text-muted">{t('loading_metrics')}</div>;
 
   return (
     <div className="card p-4 shadow-sm mt-4 border-0 rounded-3">
       <div className="mb-4">
-        <h3 className="fw-bold text-primary mb-1">NTC Vehicle Deployment Approvals</h3>
+        <h3 className="fw-bold text-primary mb-1">{t('deployment_approvals')}</h3>
         <p className="text-muted small mb-0">
           {user?.role === 'SUPER_ADMIN' ? (
-            <>Viewing global operations data across all branches</>
+            <>{t('viewing_global')}</>
           ) : (
-            <>Viewing and managing operations data localized for: <span className="badge bg-dark font-monospace text-uppercase">{branch.replace('_', ' ')}</span></>
+            <>{t('viewing_localized')} <span className="badge bg-dark font-monospace text-uppercase">{branch.replace('_', ' ')}</span></>
           )}
         </p>
       </div>
       
       {requests.length === 0 ? (
-        <p className="text-muted text-center py-4">No active vehicle requests found.</p>
+        <p className="text-muted text-center py-4">{t('no_active_requests')}</p>
       ) : (
         <div className="table-responsive">
           <table className="table table-hover align-middle">
             <thead className="table-light">
               <tr>
-                <th>Req ID</th>
-                <th>Employee</th>
-                <th>Req. Vehicle Type</th>
-                <th>Route</th>
-                <th>Assignment</th>
-                <th>Status</th>
-                <th className="text-center">Operations</th>
+                <th>{t('req_id')}</th>
+                <th>{t('employee')}</th>
+                <th>{t('req_vehicle_type')}</th>
+                <th>{t('route')}</th>
+                <th>{t('assignment')}</th>
+                <th>{t('status')}</th>
+                <th className="text-center">{t('operations')}</th>
               </tr>
             </thead>
             <tbody>
@@ -129,7 +134,7 @@ const RequestManagement = () => {
                   <td><strong>#REQ-{req.id}</strong></td>
                   <td>{req.first_name} {req.last_name}</td>
                   <td><span className="badge bg-secondary">{req.vehicle_type}</span></td>
-                  <td>From: {req.pickup_location}<br/>To: {req.destination}</td>
+                  <td>{t('from')}: {req.pickup_location}<br/>{t('to')}: {req.destination}</td>
                   <td>
                     {req.status === 'PENDING' ? (
                       <div className="d-flex flex-column gap-2">
@@ -147,11 +152,11 @@ const RequestManagement = () => {
                             }
                           }}
                         >
-                          <option value="">-- Assign Driver --</option>
+                          <option value="">{t('assign_driver')}</option>
                           {drivers.map(d => <option key={d.id} value={d.id}>{d.first_name} {d.last_name}</option>)}
                         </select>
                         <select className="form-select form-select-sm" id={`vehicle-${req.id}`}>
-                          <option value="">-- Assign Vehicle --</option>
+                          <option value="">{t('assign_vehicle')}</option>
                           {vehicles.map(v => <option key={v.id} value={v.id}>{v.license_plate} ({v.model})</option>)}
                         </select>
                       </div>
@@ -159,8 +164,8 @@ const RequestManagement = () => {
                       <div className="text-muted small">
                         {req.status === 'APPROVED' || req.status === 'IN_PROGRESS' || req.status === 'COMPLETED' ? (
                           <>
-                            <div>Driver Assigned</div>
-                            {req.license_plate && <div>Vehicle: {req.license_plate}</div>}
+                            <div>{t('driver_assigned')}</div>
+                            {req.license_plate && <div>{t('vehicle')}: {req.license_plate}</div>}
                           </>
                         ) : 'N/A'}
                       </div>
@@ -178,13 +183,13 @@ const RequestManagement = () => {
                           onClick={() => handleAssign(req.id)} 
                           className="btn btn-success"
                         >
-                          Approve
+                          {t('approve')}
                         </button>
                         <button 
                           onClick={() => handleStatusUpdate(req.id, 'REJECTED')} 
                           className="btn btn-danger"
                         >
-                          Reject
+                          {t('reject')}
                         </button>
                       </div>
                     )}

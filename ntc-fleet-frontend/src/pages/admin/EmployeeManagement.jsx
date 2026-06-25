@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, CheckCircle, XCircle, Search } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { toast } from 'react-hot-toast';
+import toast from '../../utils/toast';
 
 const EmployeeManagement = () => {
   const [employees, setEmployees] = useState([]);
