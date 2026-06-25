@@ -68,11 +68,16 @@ const SecurityDashboard = () => {
 
   if (loading) return <div className="p-5 text-center text-muted"><div className="spinner-border text-primary" /></div>;
 
-  // Active trips: APPROVED or IN_PROGRESS
-  const activeTrips = requests.filter(r => ['APPROVED', 'IN_PROGRESS'].includes(r.status));
+  // Active trips: Ongoing for driver OR vehicle hasn't returned to gate yet
+  const activeTrips = requests.filter(r => 
+    ['APPROVED', 'IN_PROGRESS'].includes(r.status) || 
+    (r.status === 'COMPLETED' && r.gate_status === 'DEPARTED')
+  );
   
-  // History trips: Only COMPLETED trips (assigned and finished)
-  const historyTrips = requests.filter(r => r.status === 'COMPLETED');
+  // History trips: Completed by driver AND (returned to gate OR skipped departure tracking)
+  const historyTrips = requests.filter(r => 
+    r.status === 'COMPLETED' && r.gate_status !== 'DEPARTED'
+  );
 
   return (
     <div className="container-fluid p-4">
