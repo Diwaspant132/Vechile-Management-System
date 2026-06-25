@@ -17,6 +17,9 @@ import { verifyToken, requireRole } from './middleware/auth.js';
 
 dotenv.config();
 
+// FORCE NODE TO UTC SO POSTGRES TIMESTAMPS ARE NOT DOUBLE-SHIFTED
+process.env.TZ = 'UTC';
+
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
