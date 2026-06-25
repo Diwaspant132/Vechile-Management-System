@@ -3,6 +3,7 @@ import { Play, Square, MapPin, History, Car } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from '../../utils/toast';
 import { io } from 'socket.io-client';
+import { formatTimeFromUTC } from '../../utils/dateUtils';
 
 function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
   const R = 6371e3; // Earth radius in meters
@@ -354,8 +355,8 @@ const TripManagementContent = () => {
                              <span className="text-muted">-</span>
                            )}
                          </td>
-                         <td>{trip.start_time ? new Date(trip.start_time).toLocaleString() : '-'}</td>
-                         <td>{trip.end_time ? new Date(trip.end_time).toLocaleString() : '-'}</td>
+                         <td>{formatTimeFromUTC(trip.start_time)}</td>
+                         <td>{formatTimeFromUTC(trip.end_time)}</td>
                          <td>
                            <span className={`badge ${trip.status === 'ACTIVE' ? 'bg-success' : 'bg-secondary'}`}>
                              {trip.status}

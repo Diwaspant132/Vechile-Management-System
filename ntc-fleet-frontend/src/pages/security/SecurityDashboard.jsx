@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import toast from '../../utils/toast';
 import { CarFront, MapPin, Clock, Users, ArrowRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { customConfirm } from '../../components/customConfirm';
+import { formatTimeFromUTC } from '../../utils/dateUtils';
 
 const SecurityDashboard = () => {
   const [requests, setRequests] = useState([]);
@@ -232,10 +233,10 @@ const SecurityDashboard = () => {
                            </span>
                         </td>
                         <td className="small text-muted">
-                           {trip.gate_departed_at ? new Date(trip.gate_departed_at).toLocaleString() : '-'}
+                           {formatTimeFromUTC(trip.gate_departed_at)}
                         </td>
                         <td className="small text-muted">
-                           {trip.gate_returned_at ? new Date(trip.gate_returned_at).toLocaleString() : '-'}
+                           {formatTimeFromUTC(trip.gate_returned_at)}
                         </td>
                       </tr>
                     ))
