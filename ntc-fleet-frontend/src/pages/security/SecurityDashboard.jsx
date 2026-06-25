@@ -70,8 +70,8 @@ const SecurityDashboard = () => {
   // Active trips: APPROVED or IN_PROGRESS
   const activeTrips = requests.filter(r => ['APPROVED', 'IN_PROGRESS'].includes(r.status));
   
-  // History trips: COMPLETED or CANCELLED
-  const historyTrips = requests.filter(r => ['COMPLETED', 'CANCELLED'].includes(r.status));
+  // History trips: Only COMPLETED trips (assigned and finished)
+  const historyTrips = requests.filter(r => r.status === 'COMPLETED');
 
   return (
     <div className="container-fluid p-4">
