@@ -179,7 +179,9 @@ async function initDB() {
       pickup_time TEXT,
       status TEXT,
       passengers TEXT,
-      gate_status TEXT DEFAULT 'WAITING'
+      gate_status TEXT DEFAULT 'WAITING',
+      gate_departed_at TIMESTAMP,
+      gate_returned_at TIMESTAMP
     );
     CREATE TABLE IF NOT EXISTS vehicle_locations (
         vehicle_id INTEGER PRIMARY KEY REFERENCES vehicles(id) ON DELETE CASCADE,
@@ -271,6 +273,13 @@ async function initDB() {
     INSERT INTO system_settings (require_manager_approval) SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM system_settings);
   `);
   
+  try {
+    await db.exec("ALTER TABLE requests ADD COLUMN gate_departed_at TIMESTAMP;");
+  } catch(e) {}
+  try {
+    await db.exec("ALTER TABLE requests ADD COLUMN gate_returned_at TIMESTAMP;");
+  } catch(e) {}
+
   console.log("✅ Database initialized with Trip Activation and Live Tracking support (PostgreSQL).");
 }
 
@@ -1052,7 +1061,19 @@ app.put('/api/requests/status/:id', async (req, res) => {
 app.put('/api/requests/:id/gate-status', async (req, res) => {
   try {
     const { gate_status } = req.body;
-    await db.run("UPDATE requests SET gate_status = ? WHERE id = ?", [gate_status, req.params.id]);
+    let query = "UPDATE requests SET gate_status = ?";
+    const params = [gate_status];
+    
+    if (gate_status === 'DEPARTED') {
+      query += ", gate_departed_at = CURRENT_TIMESTAMP";
+    } else if (gate_status === 'RETURNED') {
+      query += ", gate_returned_at = CURRENT_TIMESTAMP";
+    }
+    
+    query += " WHERE id = ?";
+    params.push(req.params.id);
+
+    await db.run(query, params);
     await logAudit('SECURITY', `Request #${req.params.id} marked as ${gate_status} by security guard.`);
     res.json({ message: "Gate status updated successfully" });
   } catch (e) {

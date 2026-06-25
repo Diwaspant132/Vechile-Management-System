@@ -202,6 +202,8 @@ const SecurityDashboard = () => {
                     <th>Destination</th>
                     <th>Status</th>
                     <th>Gate Status</th>
+                    <th>Departed At</th>
+                    <th>Returned At</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -228,6 +230,12 @@ const SecurityDashboard = () => {
                            <span className="badge bg-secondary text-white">
                              {trip.gate_status || 'UNKNOWN'}
                            </span>
+                        </td>
+                        <td className="small text-muted">
+                           {trip.gate_departed_at ? new Date(trip.gate_departed_at).toLocaleString() : '-'}
+                        </td>
+                        <td className="small text-muted">
+                           {trip.gate_returned_at ? new Date(trip.gate_returned_at).toLocaleString() : '-'}
                         </td>
                       </tr>
                     ))
