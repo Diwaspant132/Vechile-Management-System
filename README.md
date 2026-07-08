@@ -27,6 +27,9 @@ An enterprise-grade, multi-tenant fleet management and telemetry platform design
 ### 5. Driver Trip Management Console
 <img src="https://raw.githubusercontent.com/Diwaspant132/Vechile-Management-System/main/assets/4_trip_management.png" width="800">
 
+### 6. Physical Gate Security Control
+<img src="https://raw.githubusercontent.com/Diwaspant132/Vechile-Management-System/main/assets/6_security_dashboard.png" width="800">
+
 ---
 
 ## ✨ Key Features
